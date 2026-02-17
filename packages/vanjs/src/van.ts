@@ -45,8 +45,30 @@ export type TagFunc<Result> = (
 	...rest: readonly ChildDom[]
 ) => Result;
 
-type Tags = Readonly<Record<string, TagFunc<Element>>> & {
+// HTML Tags - typed for all known HTML elements
+type HTMLTags = Readonly<Record<string, TagFunc<Element>>> & {
 	[K in keyof HTMLElementTagNameMap]: TagFunc<HTMLElementTagNameMap[K]>;
+};
+
+// SVG Tags - typed for all known SVG elements
+type SVGTags = Readonly<Record<string, TagFunc<SVGElement>>> & {
+	[K in keyof SVGElementTagNameMap]: TagFunc<SVGElementTagNameMap[K]>;
+};
+
+// MathML Tags - typed for all known MathML elements
+type MathMLTags = Readonly<Record<string, TagFunc<MathMLElement>>> & {
+	[K in keyof MathMLElementTagNameMap]: TagFunc<MathMLElementTagNameMap[K]>;
+};
+
+// Namespace URIs
+type SVGNamespaceURI = "http://www.w3.org/2000/svg";
+type MathMLNamespaceURI = "http://www.w3.org/1998/Math/MathML";
+
+// Namespace function overloads
+type NamespacedTags = {
+	(namespaceURI: SVGNamespaceURI): SVGTags;
+	(namespaceURI: MathMLNamespaceURI): MathMLTags;
+	(namespaceURI: string): Readonly<Record<string, TagFunc<Element>>>;
 };
 
 declare function state<T>(): State<T>;
@@ -59,8 +81,7 @@ export interface Van {
 		dom: Element | DocumentFragment,
 		...children: readonly ChildDom[]
 	) => Element;
-	readonly tags: Tags &
-		((namespaceURI: string) => Readonly<Record<string, TagFunc<Element>>>);
+	readonly tags: HTMLTags & NamespacedTags;
 	readonly hydrate: <T extends Node>(
 		dom: T,
 		f: (dom: T) => T | null | undefined,
