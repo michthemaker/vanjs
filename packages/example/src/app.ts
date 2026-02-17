@@ -6,7 +6,11 @@ const { div, h1, p } = van.tags;
 const { svg } = van.tags("http://www.w3.org/2000/svg");
 
 const app = div(
-	h1({ class: "px-1 text-2xl" }, "Hello, World!", p({})),
+	h1(
+		{ class: "px-1 text-2xl", onabort: (e) => console.log("abort") },
+		"Hello, World!",
+		p({}),
+	),
 	p("This is a test of the vanjs types."),
 	svg(),
 );
