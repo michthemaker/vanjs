@@ -15,6 +15,14 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/example:
+    dependencies:
+      '@michthemaker/vanjs':
+        specifier: workspace:*
+        version: link:../vanjs
+
+  packages/vanjs: {}
+
 packages:
 
   '@eslint-community/eslint-utils@4.9.1':
