@@ -4,15 +4,15 @@
 		"target": "ES2022",
 		"useDefineForClassFields": true,
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
-		"module": "ESNext",
+		"module": "Node16",
 		"skipLibCheck": true,
 		"paths": {
 			"@src/*": ["./src/*"],
 		},
+		"declaration": true,
 
 		/* Bundler mode */
-		"moduleResolution": "nodenext",
-		"allowImportingTsExtensions": true,
+		"moduleResolution": "node16",
 		"verbatimModuleSyntax": true,
 		"moduleDetection": "force",
 
@@ -26,5 +26,5 @@
 
 		"outDir": "dist",
 	},
-	"include": ["src"],
+	"include": ["src", "test"],
 }

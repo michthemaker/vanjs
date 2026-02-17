@@ -6,7 +6,7 @@
 	"scripts": {},
 	"exports": {
 		".": {
-			"types": "./src/index.ts",
+			"types": "./src/van.ts",
 			"import": "./src/index.ts"
 		}
 	},
