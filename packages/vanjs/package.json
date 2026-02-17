@@ -1,0 +1,51 @@
+{
+	"name": "@michthemaker/vanjs",
+	"version": "0.1.0",
+	"type": "module",
+	"description": "🍦 VanJS: The Smallest Reactive UI Framework in the World",
+	"scripts": {},
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts"
+		}
+	},
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"import": "./dist/index.js"
+			}
+		}
+	},
+	"keywords": [
+		"Van",
+		"Vanilla",
+		"UI",
+		"UI Framework",
+		"React",
+		"Reactive",
+		"DOM",
+		"DOM Manipulation",
+		"Zero-Dependency",
+		"lightweight",
+		"Ultra-lightweight",
+		"Minimalist"
+	],
+	"author": "Michthebrand <michthebrand@gmail.com>",
+	"contributors": [
+		"Tao VanJS",
+		"efpage <info@efpage.de>",
+		"other contributors"
+	],
+	"license": "MIT",
+	"packageManager": "pnpm@10.28.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/michthemaker/vanjs.git"
+	},
+	"bugs": {
+		"url": "https://github.com/michthemaker/vanjs/issues",
+		"email": "michthebrand@gmail.com"
+	}
+}
