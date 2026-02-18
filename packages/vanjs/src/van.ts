@@ -1,3 +1,10 @@
+import type { ElementEventHandlers } from "./event-handlers.ts";
+
+export type {
+	ElementEventHandlers,
+	ReactiveEventHandler,
+} from "./event-handlers.ts";
+
 export interface State<T> {
 	val: T;
 	readonly oldVal: T;
@@ -25,7 +32,11 @@ export type Props = Record<string, PropValueOrDerived> & {
 };
 
 export type PropsWithKnownKeys<ElementType> = Partial<{
-	[K in keyof ElementType]: PropValueOrDerived;
+	[K in keyof ElementType as K extends `on${string}`
+		? ((ev: Event) => any) | null extends ElementType[K]
+			? never
+			: K
+		: K]: PropValueOrDerived;
 }>;
 
 export type ValidChildDomValue = Primitive | Node | null | undefined;
@@ -40,8 +51,10 @@ export type ChildDom =
 	| BindingFunc
 	| readonly ChildDom[];
 
-export type TagFunc<Result> = (
-	first?: (Props & PropsWithKnownKeys<Result>) | ChildDom,
+export type TagFunc<Result extends Element> = (
+	first?:
+		| (Props & PropsWithKnownKeys<Result> & ElementEventHandlers<Result>)
+		| ChildDom,
 	...rest: readonly ChildDom[]
 ) => Result;
 
