@@ -163,7 +163,8 @@ let add = (dom: Element, ...children: readonly ChildDom[]): Element => {
 				: protoOfC === funcProto
 					? bind(c as BindingFunc)
 					: c;
-		child != _undefined && dom.append(child as Node);
+		child != _undefined &&
+			(Array.isArray(child) ? add(dom, ...child) : dom.append(child as Node));
 	}
 	return dom;
 };

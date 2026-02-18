@@ -6,6 +6,7 @@ const { div, h1, p, input } = van.tags;
 const { svg } = van.tags("http://www.w3.org/2000/svg");
 
 const Home = () => {
+	const details = van.state(["John Doe", 30, "Developer"] as const);
 	return div(
 		h1(
 			{
@@ -18,7 +19,8 @@ const Home = () => {
 				oninput: (e) => console.log(e.currentTarget.value),
 			}),
 			"Hello, World!",
-			// ["name", "age"].map((_) => p({})),
+			() => p(),
+			() => details.val.map((_) => p(_)),
 		),
 		p("This is a test of the vanjs types."),
 		svg(),
