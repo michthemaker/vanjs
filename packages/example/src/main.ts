@@ -17,8 +17,9 @@ const Home = () => {
 	}, base * 5);
 	return div(
 		h1(
-			() => details.val.map((_) => p(_)),
+			() => details.val.map((_) => [p(_), p(_)]),
 			"Hello, World!",
+			[p("me"), h1("us")],
 			() => p(),
 		),
 		p("This is a test of the vanjs types."),

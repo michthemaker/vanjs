@@ -39,9 +39,14 @@ export type PropsWithKnownKeys<ElementType> = Partial<{
 		: K]: PropValueOrDerived;
 }>;
 
-export type ValidChildDomValue = Primitive | Node | null | undefined;
+export type ValidChildDomValue =
+	| Primitive
+	| Node
+	| null
+	| undefined
+	| ValidChildDomValue[];
 
-export type BindingFunc = () => ValidChildDomValue | ValidChildDomValue[];
+export type BindingFunc = () => ValidChildDomValue;
 
 export type ChildDom =
 	| ValidChildDomValue
