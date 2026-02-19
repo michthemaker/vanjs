@@ -2,11 +2,7 @@
 
 import type { State, ChildDom, Van } from "./van.ts";
 import type { ListBinding } from "./reactive-lists.ts";
-import {
-	createListBinding,
-	updateListBinding,
-	isNodeArray,
-} from "./reactive-lists.js";
+import { createListBinding, updateListBinding } from "./reactive-lists.js";
 
 export type * from "./van.ts";
 
