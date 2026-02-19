@@ -1,12 +1,18 @@
 // This file consistently uses `let` keyword instead of `const` for reducing the bundle size.
 
 import type { State, ChildDom, Van } from "./van.ts";
+import type { ListBinding } from "./reactive-lists.ts";
+import {
+	createListBinding,
+	updateListBinding,
+	isNodeArray,
+} from "./reactive-lists.js";
 
 export type * from "./van.ts";
 
 // Internal types
 type ConnectedDom = Node | { isConnected: number };
-type Binding = { f: BindingFunc; _dom?: Node };
+type Binding = { f: BindingFunc; _dom?: Node; _listBinding?: ListBinding };
 type Listener = {
 	f: DeriveFunc;
 	s: StateInternal<unknown>;
@@ -118,6 +124,9 @@ let state = <T>(initVal?: T): State<T> =>
 		_listeners: [],
 	}) as unknown as State<T>;
 
+// WeakMap to track list bindings by their start markers
+let listBindingMap = new WeakMap<Comment, ListBinding>();
+
 let bind = (f: BindingFunc, dom?: Node): Node => {
 	let deps: Deps = { _getters: new Set(), _setters: new Set() },
 		binding: Binding = { f },
@@ -128,12 +137,24 @@ let bind = (f: BindingFunc, dom?: Node): Node => {
 		deps as Deps,
 		dom,
 	);
+
+	// Handle array of nodes
+	if (isNodeArray(newDom)) {
+		let listBinding = createListBinding(newDom);
+		binding._listBinding = listBinding;
+		listBindingMap.set(listBinding.startMarker, listBinding);
+		for (let d of deps._getters)
+			deps._setters.has(d) || (addStatesToGc(d), d._bindings.push(binding));
+		for (let l of curNewDerives) l._dom = listBinding.startMarker;
+		curNewDerives = prevNewDerives;
+		return (binding._dom = listBinding.startMarker);
+	}
+
+	// Handle single node or text node
 	newDom = ((newDom ?? document) as Node).nodeType
-		? // handle single node
-			newDom
-		: // handle text node
-			new Text(newDom as string);
-	// no array of nodes
+		? newDom
+		: new Text(newDom as string);
+
 	for (let d of deps._getters)
 		deps._setters.has(d) || (addStatesToGc(d), d._bindings.push(binding));
 	for (let l of curNewDerives) l._dom = newDom as Node;
@@ -166,8 +187,25 @@ let add = (dom: Element, ...children: readonly ChildDom[]): Element => {
 				: protoOfC === funcProto
 					? bind(c as BindingFunc)
 					: c;
-		child != _undefined &&
-			(Array.isArray(child) ? add(dom, ...child) : dom.append(child as Node));
+		if (child != _undefined) {
+			if (Array.isArray(child)) {
+				add(dom, ...child);
+			} else {
+				// Check if this is a list binding start marker
+				let listBinding = listBindingMap.get(child as Comment);
+				if (listBinding) {
+					// Append start marker, all nodes, and end marker
+					dom.append(listBinding.startMarker);
+					for (let node of listBinding.nodes) {
+						dom.append(node);
+					}
+					dom.append(listBinding.endMarker);
+				} else {
+					// Regular node
+					dom.append(child as Node);
+				}
+			}
+		}
 	}
 	return dom;
 };
@@ -259,8 +297,28 @@ let updateDoms = (): void => {
 		changedStatesArray.flatMap(
 			(s) => (s._bindings = keepConnected(s._bindings)),
 		),
-	))
-		(update(b._dom as ChildNode, bind(b.f, b._dom)), (b._dom = _undefined));
+	)) {
+		// Check if this is a list binding
+		if (b._listBinding) {
+			// Re-run the binding function to get new nodes
+			let deps: Deps = { _getters: new Set(), _setters: new Set() };
+			let newDom: unknown = runAndCaptureDeps(
+				b.f as (arg: unknown) => unknown,
+				deps as Deps,
+				b._dom,
+			);
+			// Update the list binding with new nodes
+			if (isNodeArray(newDom)) {
+				updateListBinding(b._listBinding, newDom);
+			}
+			// Restore the DOM reference to the start marker
+			b._dom = b._listBinding.startMarker;
+		} else {
+			// Regular single node update
+			update(b._dom as ChildNode, bind(b.f, b._dom));
+			b._dom = _undefined;
+		}
+	}
 	for (let s of changedStatesArray) s._oldVal = s.rawVal;
 };
 
