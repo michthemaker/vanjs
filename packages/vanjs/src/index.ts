@@ -129,8 +129,11 @@ let bind = (f: BindingFunc, dom?: Node): Node => {
 		dom,
 	);
 	newDom = ((newDom ?? document) as Node).nodeType
-		? newDom
-		: new Text(newDom as string);
+		? // handle single node
+			newDom
+		: // handle text node
+			new Text(newDom as string);
+	// no array of nodes
 	for (let d of deps._getters)
 		deps._setters.has(d) || (addStatesToGc(d), d._bindings.push(binding));
 	for (let l of curNewDerives) l._dom = newDom as Node;
