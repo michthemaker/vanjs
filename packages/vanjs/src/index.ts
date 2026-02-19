@@ -138,9 +138,14 @@ let bind = (f: BindingFunc, dom?: Node): Node => {
 		dom,
 	);
 
-	// Handle array of nodes
-	if (isNodeArray(newDom)) {
-		let listBinding = createListBinding(newDom);
+	// Handle array of nodes (including nested arrays)
+	if (Array.isArray(newDom)) {
+		// Flatten nested arrays and filter to only Node instances
+		let flatNodes = (newDom as unknown[])
+			.flat(Infinity)
+			.map((n) => (typeof n === "string" ? new Text(n) : n))
+			.filter((n) => n instanceof Node) as Node[];
+		let listBinding = createListBinding(flatNodes);
 		binding._listBinding = listBinding;
 		listBindingMap.set(listBinding.startMarker, listBinding);
 		for (let d of deps._getters)
@@ -307,9 +312,13 @@ let updateDoms = (): void => {
 				deps as Deps,
 				b._dom,
 			);
-			// Update the list binding with new nodes
-			if (isNodeArray(newDom)) {
-				updateListBinding(b._listBinding, newDom);
+			// Update the list binding with new nodes (flatten nested arrays)
+			if (Array.isArray(newDom)) {
+				let flatNodes = (newDom as unknown[])
+					.flat(Infinity)
+					.map((n) => (typeof n === "string" ? new Text(n) : n))
+					.filter((n) => n instanceof Node) as Node[];
+				updateListBinding(b._listBinding, flatNodes);
 			}
 			// Restore the DOM reference to the start marker
 			b._dom = b._listBinding.startMarker;

@@ -5,7 +5,7 @@ const { svg } = van.tags("http://www.w3.org/2000/svg");
 
 const base = 2000;
 const Home = () => {
-	const details = van.state(["John Doe", 30]);
+	const details = van.state([]);
 	setTimeout(() => {
 		details.val = ["Jane Doe", 25];
 	}, base * 3);
@@ -17,13 +17,13 @@ const Home = () => {
 	}, base * 5);
 	return div(
 		h1(
-			() => details.val.map((_) => [p(_), p(_)]),
-			"Hello, World!",
-			[p("me"), h1("us")],
-			() => p(),
+			() => details.val.map((_) => [p(_), "me us uo"]),
+			// "Hello, World!",
+			// [p("me"), h1("us")],
+			// () => p(),
 		),
-		p("This is a test of the vanjs types."),
-		svg(),
+		// p("This is a test of the vanjs types."),
+		// svg(),
 	);
 };
 
