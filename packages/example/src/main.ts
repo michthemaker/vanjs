@@ -1,29 +1,43 @@
 import van from "@michthemaker/vanjs";
 
-const { div, h1, p } = van.tags;
-const { svg } = van.tags("http://www.w3.org/2000/svg");
+const { div, h1, p, video, button } = van.tags;
 
-const base = 2000;
 const Home = () => {
-	const details = van.state([]);
-	setTimeout(() => {
-		details.val = ["Jane Doe", 25];
-	}, base * 3);
-	setTimeout(() => {
-		details.val = [24, "Developer"];
-	}, base * 4);
-	setTimeout(() => {
-		details.val = ["Jane Doe", "jakub krehel", "joela", 30, "james"];
-	}, base * 5);
+	const cellMembers = van.state([
+		{ name: "Jane", age: 25 },
+		{ name: "Joy", age: 18 },
+	]);
+	const cars = van.state([
+		{ name: "Toyota", year: 2020 },
+		{ name: "Honda", year: 2019 },
+	]);
 	return div(
-		h1(
-			() => details.val.map((_) => [p(_), "me us uo"]),
-			// "Hello, World!",
-			// [p("me"), h1("us")],
-			// () => p(),
+		div(
+			// render nested list
+			() =>
+				cellMembers.val.map((member) => [
+					h1(member.name),
+					p(`${member.age} years old`),
+				]),
 		),
-		// p("This is a test of the vanjs types."),
-		// svg(),
+		div(
+			// render list
+			() => cars.val.map((car) => div(h1(car.name), p(`${car.year} model`))),
+		),
+		Video(),
+	);
+};
+
+export const Video = () => {
+	return div(
+		video({ src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }),
+		button(
+			{
+				onclick: (e) /* e is typed as PointerEvent */ =>
+					console.log("Button clicked!", e.currentTarget),
+			},
+			"This is a video.",
+		),
 	);
 };
 
