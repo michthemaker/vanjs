@@ -1,33 +1,20 @@
 {
-  "name": "@michthemaker/vanjs",
+  "name": "@michthemaker/vite-plugin-vanjs",
   "version": "0.1.0",
-  "description": "🍦 VanJS: The Smallest Reactive UI Framework in the World",
+  "description": "The default Vite plugin for VanJS projects",
   "keywords": [
-    "DOM",
-    "DOM Manipulation",
-    "Minimalist",
-    "React",
-    "Reactive",
-    "UI",
-    "UI Framework",
-    "Ultra-lightweight",
-    "Van",
-    "Vanilla",
-    "Zero-Dependency",
-    "lightweight"
+    "fast refresh",
+    "vanjs",
+    "vite",
+    "vite-plugin"
   ],
-  "homepage": "https://github.com/michthemaker/vanjs/tree/main/packages/vanjs",
+  "homepage": "https://github.com/michthemaker/vanjs/tree/main/packages/vite-plugin-vanjs",
   "bugs": {
     "url": "https://github.com/michthemaker/vanjs/issues",
     "email": "michthebrand@gmail.com"
   },
   "license": "MIT",
   "author": "Michthebrand <michthebrand@gmail.com>",
-  "contributors": [
-    "Tao VanJS",
-    "efpage <info@efpage.de>",
-    "other contributors"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/michthemaker/vanjs.git"
@@ -35,7 +22,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./src/van.ts",
+      "types": "./src/index.ts",
       "import": "./src/index.ts"
     }
   },
