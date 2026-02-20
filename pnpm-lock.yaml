@@ -24,12 +24,6 @@ importers:
         specifier: ^7.3.1
         version: 7.3.1(@types/node@25.3.0)
 
-  packages/example:
-    dependencies:
-      '@michthemaker/vanjs':
-        specifier: workspace:*
-        version: link:../vanjs
-
   packages/vanjs: {}
 
 packages:
