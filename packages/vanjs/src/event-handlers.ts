@@ -5,9 +5,17 @@ import type { StateView } from "./van.ts";
 
 /**
  * Extracts the event type from an event handler property.
- * e.g., `((e: MouseEvent) => any) | null` -> `MouseEvent`
+ *
+ * The `[T]` tuple syntax prevents TypeScript from distributing over union types,
+ * ensuring we get a single specific event type (e.g., `PointerEvent`) instead of
+ * a union of event types (e.g., `Event | PointerEvent`).
+ *
+ * @example `((e: MouseEvent) => any) | null` -> `MouseEvent`
  */
-type ExtractEventType<T> = T extends ((e: infer E extends Event) => any) | null
+
+type ExtractEventType<T> = [T] extends [
+	((e: infer E extends Event) => any) | null,
+]
 	? E
 	: Event;
 
