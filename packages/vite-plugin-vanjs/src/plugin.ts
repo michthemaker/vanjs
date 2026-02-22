@@ -1,25 +1,24 @@
-// ============================================
 // Part 1: Vite Plugin (Build Time)
-// ============================================
-
-// vite-plugin-vanjs-hmr.ts
-import { Plugin } from 'vite';
-import MagicString from 'magic-string';
+import MagicString from "magic-string";
+import { type Plugin } from "vite";
 
 export interface VanJSHMROptions {
   include?: RegExp;
   exclude?: RegExp;
 }
 
-export default function vanJSHMR(options: VanJSHMROptions = {}): Plugin {
-  const {
-    include = /\.(jsx?|tsx?)$/,
-    exclude = /node_modules/
-  } = options;
+export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
+  const { include = /\.(js?|ts?)$/, exclude = /node_modules/ } = options;
+
+  console.log(include, exclude);
+  return {
+    name: "vite-plugin-vanjs-hmr",
+    enforce: "pre",
+  };
 
   return {
-    name: 'vite-plugin-vanjs-hmr',
-    enforce: 'pre',
+    name: "vite-plugin-vanjs-hmr",
+    enforce: "pre",
 
     transform(code, id) {
       if (!include.test(id) || exclude.test(id)) {
@@ -27,7 +26,7 @@ export default function vanJSHMR(options: VanJSHMROptions = {}): Plugin {
       }
 
       // Only transform files that use VanJS
-      if (!code.includes('van.state') && !code.includes('van.tags')) {
+      if (!code.includes("van.state") && !code.includes("van.tags")) {
         return null;
       }
 
@@ -52,7 +51,8 @@ export default function vanJSHMR(options: VanJSHMROptions = {}): Plugin {
       }
 
       // 2. Wrap PascalCase functions (components)
-      const componentPattern = /(?:export\s+)?(?:const|function)\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(\([^)]*\))\s*=>/g;
+      const componentPattern =
+        /(?:export\s+)?(?:const|function)\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(\([^)]*\))\s*=>/g;
       const components: string[] = [];
 
       while ((match = componentPattern.exec(code)) !== null) {
@@ -60,7 +60,7 @@ export default function vanJSHMR(options: VanJSHMROptions = {}): Plugin {
         components.push(componentName);
 
         const start = match.index;
-        const end = code.indexOf('=>', start) + 2;
+        const end = code.indexOf("=>", start) + 2;
 
         // Wrap with HMR tracking
         s.appendLeft(
@@ -72,15 +72,15 @@ export default function vanJSHMR(options: VanJSHMROptions = {}): Plugin {
         let depth = 0;
         let funcEnd = end;
         for (let i = end; i < code.length; i++) {
-          if (code[i] === '{') depth++;
-          if (code[i] === '}') depth--;
-          if (depth === 0 && (code[i] === ';' || code[i] === '\n')) {
+          if (code[i] === "{") depth++;
+          if (code[i] === "}") depth--;
+          if (depth === 0 && (code[i] === ";" || code[i] === "\n")) {
             funcEnd = i;
             break;
           }
         }
 
-        s.appendRight(funcEnd, ')');
+        s.appendRight(funcEnd, ")");
       }
 
       // 3. Inject HMR runtime at the top of the file
@@ -107,22 +107,22 @@ if (import.meta.hot) {
 
       return {
         code: s.toString(),
-        map: s.generateMap({ hires: true })
+        map: s.generateMap({ hires: true }),
       };
     },
 
     // Provide virtual module for HMR runtime
     resolveId(id) {
-      if (id === 'virtual:vanjs-hmr-runtime') {
-        return '\0' + id;
+      if (id === "virtual:vanjs-hmr-runtime") {
+        return "\0" + id;
       }
     },
 
     load(id) {
-      if (id === '\0virtual:vanjs-hmr-runtime') {
+      if (id === "\0virtual:vanjs-hmr-runtime") {
         return HMR_RUNTIME_CODE;
       }
-    }
+    },
   };
 }
 

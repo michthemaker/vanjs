@@ -20,9 +20,10 @@
     "url": "git+https://github.com/michthemaker/vanjs.git"
   },
   "type": "module",
+  "main": "./index.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./src/index.d.ts",
       "import": "./src/index.ts"
     }
   },
@@ -35,9 +36,9 @@
     }
   },
   "scripts": {},
-  "packageManager": "pnpm@10.28.0",
   "devDependencies": {
     "magic-string": "^0.30.21",
     "vite": "^7.3.1"
-  }
+  },
+  "packageManager": "pnpm@10.28.0"
 }

@@ -10,11 +10,15 @@
   "license": "ISC",
   "author": "michthebrand",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
+  },
   "devDependencies": {
     "@types/node": "^25.3.0",
     "@typescript/native-preview": "7.0.0-dev.20260220.1",
     "eslint": "^10.0.0",
+    "oxfmt": "^0.34.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   },

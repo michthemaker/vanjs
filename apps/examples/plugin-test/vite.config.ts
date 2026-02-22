@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
+import vanjs from "@michthemaker/vite-plugin-vanjs";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -8,5 +9,5 @@ export default defineConfig({
       "@src": resolve("./src/"),
     },
   },
-  plugins: [],
+  plugins: [vanjs()],
 });
