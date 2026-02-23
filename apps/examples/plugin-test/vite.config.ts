@@ -9,5 +9,5 @@ export default defineConfig({
       "@src": resolve("./src/"),
     },
   },
-  plugins: [vanjs()],
+  // plugins: [vanjs()],
 });

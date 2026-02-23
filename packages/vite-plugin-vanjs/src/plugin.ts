@@ -10,12 +10,6 @@ export interface VanJSHMROptions {
 export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
   const { include = /\.(js?|ts?)$/, exclude = /node_modules/ } = options;
 
-  console.log(include, exclude);
-  return {
-    name: "vite-plugin-vanjs-hmr",
-    enforce: "pre",
-  };
-
   return {
     name: "vite-plugin-vanjs-hmr",
     enforce: "pre",
@@ -24,6 +18,8 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
       if (!include.test(id) || exclude.test(id)) {
         return null;
       }
+
+      console.log(code, id, 'here is code ')
 
       // Only transform files that use VanJS
       if (!code.includes("van.state") && !code.includes("van.tags")) {

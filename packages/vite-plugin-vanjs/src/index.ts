@@ -1,11 +1,11 @@
 import type { PluginOption } from "vite";
-import { hmrPlugin, type VanJSHMROptions } from "./plugin";
+import { hmrPlugin, type VanJSHMROptions } from "./plugin.ts";
 
 type Options = {
   hmr?: boolean | VanJSHMROptions | undefined;
 };
 
-export default function vanjs(options: Options = {}) {
+export default function vanjs(options: Options = { hmr: true }) {
   const plugins: PluginOption[] = [];
   if (options.hmr)
     plugins.push(
