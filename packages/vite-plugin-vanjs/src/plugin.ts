@@ -19,7 +19,7 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
         return null;
       }
 
-      console.log(code, id, 'here is code ')
+      console.log(code, id, "here is code ");
 
       // Only transform files that use VanJS
       if (!code.includes("van.state") && !code.includes("van.tags")) {
