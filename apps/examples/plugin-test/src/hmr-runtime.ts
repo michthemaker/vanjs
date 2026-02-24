@@ -17,6 +17,7 @@ class VanJSHMRRuntime {
   originalVanState: any = null;
   originalVanDerive: any = null;
   initialized = false;
+  gcIntervalId: any = null;
 
   init() {
     if (this.initialized) return;
@@ -59,6 +60,11 @@ class VanJSHMRRuntime {
 
       return derived;
     };
+
+    // Schedule periodic GC to clean up disconnected components (every 30 seconds)
+    if (!this.gcIntervalId) {
+      this.gcIntervalId = setInterval(() => this.cleanup(), 30000);
+    }
   }
 
   // Create state with a stable HMR ID so it survives module re-execution
@@ -97,11 +103,34 @@ class VanJSHMRRuntime {
     const baseId = id;
 
     // Find next available instance index
+    // First, look for connected slots that can be reused (for HMR re-render scenario)
+    let connectedIndex = -1;
     let index = 0;
     while (this.renderSlots.has(`${baseId}:${index}`)) {
+      const slot = this.renderSlots.get(`${baseId}:${index}`);
+      if (slot && slot.startMarker.isConnected && connectedIndex === -1) {
+        // Found a connected slot - reuse it instead of creating new instance
+        connectedIndex = index;
+      }
       index++;
     }
-    id = `${baseId}:${index}`;
+
+    // If we found a connected slot, reuse it; otherwise use next available index
+    if (connectedIndex !== -1) {
+      id = `${baseId}:${connectedIndex}`;
+    } else {
+      // Find first available slot number (including disconnected ones to reuse)
+      index = 0;
+      while (this.renderSlots.has(`${baseId}:${index}`)) {
+        const slot = this.renderSlots.get(`${baseId}:${index}`);
+        // Reuse disconnected slot index
+        if (slot && !slot.startMarker.isConnected) {
+          break;
+        }
+        index++;
+      }
+      id = `${baseId}:${index}`;
+    }
 
     // Set instance context so createState/createDerived can scope IDs per instance
     const prevInstanceId = this.currentInstanceId;
@@ -194,6 +223,50 @@ class VanJSHMRRuntime {
       const newElement = fn(slot.props);
       this.currentInstanceId = prevInstanceId;
       parent.insertBefore(newElement, endMarker);
+    }
+  }
+
+  // Garbage collect state/derived for disconnected render slots
+  // Called periodically (every 30s) to prevent memory leaks when components are removed
+  cleanup() {
+    const disconnectedSlots: string[] = [];
+
+    // Find all disconnected render slots
+    for (const [slotId, slot] of this.renderSlots.entries()) {
+      if (!slot.startMarker.isConnected) {
+        disconnectedSlots.push(slotId);
+      }
+    }
+
+    if (disconnectedSlots.length === 0) return;
+
+    console.log(`[VanJS HMR] Cleaning up ${disconnectedSlots.length} disconnected component(s)`);
+
+    // Remove render slots and their associated state/derived entries
+    for (const slotId of disconnectedSlots) {
+      this.renderSlots.delete(slotId);
+
+      // Remove all state entries for this slot (format: slotId:stateKey)
+      const statesToDelete: string[] = [];
+      for (const key of this.stateRegistry.keys()) {
+        if (key === slotId || key.startsWith(`${slotId}:`)) {
+          statesToDelete.push(key);
+        }
+      }
+      for (const key of statesToDelete) {
+        this.stateRegistry.delete(key);
+      }
+
+      // Remove all derived entries for this slot
+      const derivedToDelete: string[] = [];
+      for (const key of this.derivedRegistry.keys()) {
+        if (key === slotId || key.startsWith(`${slotId}:`)) {
+          derivedToDelete.push(key);
+        }
+      }
+      for (const key of derivedToDelete) {
+        this.derivedRegistry.delete(key);
+      }
     }
   }
 }
