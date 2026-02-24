@@ -86,7 +86,7 @@ export const CounterSection = () =>
   __VAN_HMR__.registerRender(
     "counter.ts:CounterSection",
     CounterComponent,
-    undefined,
+    undefined
   );
 
 // On HMR: module re-executes (CounterComponent is redefined), then hot.accept

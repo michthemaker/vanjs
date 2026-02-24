@@ -7,7 +7,10 @@ class VanJSHMRRuntime {
   stateRegistry = new Map<string, any>();
   derivedRegistry = new Map<string, any>();
   // Stores comment marker pairs keyed by render slot ID - persists across module reloads
-  renderSlots = new Map<string, { startMarker: Comment; endMarker: Comment; props?: any }>();
+  renderSlots = new Map<
+    string,
+    { startMarker: Comment; endMarker: Comment; props?: any }
+  >();
   currentStateContext: string | null = null;
   currentDerivedContext: string | null = null;
   currentInstanceId: string | null = null;
@@ -61,7 +64,9 @@ class VanJSHMRRuntime {
   // Create state with a stable HMR ID so it survives module re-execution
   // If inside an instance context, prepend instance ID to make state unique per instance
   createState<T>(id: string, initialValue: T) {
-    const scopedId = this.currentInstanceId ? `${this.currentInstanceId}:${id}` : id;
+    const scopedId = this.currentInstanceId
+      ? `${this.currentInstanceId}:${id}`
+      : id;
     this.currentStateContext = scopedId;
     const state = (van as any).state(initialValue);
     this.currentStateContext = null;
@@ -71,7 +76,9 @@ class VanJSHMRRuntime {
   // Create derived state with a stable HMR ID so it survives module re-execution
   // If inside an instance context, prepend instance ID to make derived unique per instance
   createDerived<T>(id: string, fn: () => T) {
-    const scopedId = this.currentInstanceId ? `${this.currentInstanceId}:${id}` : id;
+    const scopedId = this.currentInstanceId
+      ? `${this.currentInstanceId}:${id}`
+      : id;
     this.currentDerivedContext = scopedId;
     const derived = (van as any).derive(fn);
     this.currentDerivedContext = null;
@@ -82,7 +89,11 @@ class VanJSHMRRuntime {
   // van.add flattens the array so all three nodes land as siblings in the parent.
   // On subsequent calls (module re-execution without DOM reset), returns existing markers.
   // Always uses instance index (e.g., id:0, id:1) to support multiple instances from the start.
-  registerRender(id: string, fn: (props?: any) => Node, props?: any): [Comment, Node, Comment] {
+  registerRender(
+    id: string,
+    fn: (props?: any) => Node,
+    props?: any
+  ): [Comment, Node, Comment] {
     const baseId = id;
 
     // Find next available instance index
@@ -107,7 +118,11 @@ class VanJSHMRRuntime {
       }
       // Markers are still live in the DOM. hot.accept will handle re-rendering.
       this.currentInstanceId = prevInstanceId;
-      return [existingSlot.startMarker, existingSlot.startMarker, existingSlot.endMarker];
+      return [
+        existingSlot.startMarker,
+        existingSlot.startMarker,
+        existingSlot.endMarker,
+      ];
     }
 
     const startMarker = new Comment(`hmr:${id}:start`);
@@ -138,7 +153,9 @@ class VanJSHMRRuntime {
   // If the component has multiple instances, rerenders all of them.
   rerender(id: string, fn: (props?: any) => Node, props?: any) {
     // Find all slots that match this ID (handles multiple instances like id:0, id:1)
-    const matchingSlots: Array<[string, { startMarker: Comment; endMarker: Comment; props?: any }]> = [];
+    const matchingSlots: Array<
+      [string, { startMarker: Comment; endMarker: Comment; props?: any }]
+    > = [];
 
     for (const [slotId, slot] of this.renderSlots.entries()) {
       // Match exact ID or instance-prefixed ID (e.g., "counter.ts:CounterSection:0")
