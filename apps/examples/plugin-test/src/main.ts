@@ -1,7 +1,7 @@
 import van from "@michthemaker/vanjs";
 import { __VAN_HMR__ } from "./hmr-runtime";
 import { CounterSection } from "./counter";
-import { MembersSection } from "./members";
+import { MembersSection } from "./members.prod";
 
 const { div, h1 } = van.tags;
 
@@ -21,7 +21,7 @@ export const App = () =>
       "VanJS Multi-File HMR us  me"
     ),
     CounterSection(),
-    MembersSection()
+    MembersSection({ buttonTitle: "Add us Member" })
   );
 
 // Only mount if this is the first execution (not HMR reload)

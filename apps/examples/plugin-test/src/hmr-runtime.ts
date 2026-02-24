@@ -6,7 +6,7 @@ import van from "@michthemaker/vanjs";
 class VanJSHMRRuntime {
   stateRegistry = new Map<string, any>();
   // Stores comment marker pairs keyed by render slot ID - persists across module reloads
-  renderSlots = new Map<string, { startMarker: Comment; endMarker: Comment }>();
+  renderSlots = new Map<string, { startMarker: Comment; endMarker: Comment; props?: any }>();
   currentStateContext: string | null = null;
   originalVanState: any = null;
   initialized = false;
@@ -46,12 +46,13 @@ class VanJSHMRRuntime {
   // van.add flattens the array so all three nodes land as siblings in the parent.
   // On subsequent calls (module re-execution without DOM reset), returns existing markers.
   // The hot.accept callback with newModule handles actual re-rendering.
-  registerRender(id: string, fn: () => Node): [Comment, Node, Comment] {
+  registerRender(id: string, fn: (props?: any) => Node, props?: any): [Comment, Node, Comment] {
     const existing = this.renderSlots.get(id);
     if (existing) {
       if (!existing.startMarker.isConnected) {
         this.clearBetweenMarkers(existing); // safety cleanup
-        const element = fn();
+        existing.props = props; // update stored props
+        const element = fn(props);
         return [existing.startMarker, element, existing.endMarker];
       }
       // Markers are still live in the DOM. hot.accept will handle re-rendering.
@@ -60,9 +61,9 @@ class VanJSHMRRuntime {
 
     const startMarker = new Comment(`hmr:${id}:start`);
     const endMarker = new Comment(`hmr:${id}:end`);
-    this.renderSlots.set(id, { startMarker, endMarker });
+    this.renderSlots.set(id, { startMarker, endMarker, props });
 
-    const element = fn();
+    const element = fn(props);
     return [startMarker, element, endMarker];
   }
 
@@ -82,7 +83,7 @@ class VanJSHMRRuntime {
   // Called inside hot.accept with the NEW component function reference.
   // Clears everything between the existing comment markers and inserts the
   // freshly-rendered element, preserving marker positions in the DOM tree.
-  rerender(id: string, fn: () => Node) {
+  rerender(id: string, fn: (props?: any) => Node, props?: any) {
     const slot = this.renderSlots.get(id);
     if (!slot) {
       console.warn(`[VanJS HMR] rerender: no slot found for "${id}"`);
@@ -101,8 +102,11 @@ class VanJSHMRRuntime {
     // Remove all nodes between markers
     this.clearBetweenMarkers(slot);
 
-    // Render with new function (createState inside will restore from stateRegistry)
-    const newElement = fn();
+    // Update stored props and render with new function (createState inside will restore from stateRegistry)
+    if (props !== undefined) {
+      slot.props = props;
+    }
+    const newElement = fn(slot.props);
     parent.insertBefore(newElement, endMarker);
   }
 }

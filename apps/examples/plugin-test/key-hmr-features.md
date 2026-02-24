@@ -5,91 +5,225 @@
 
 ---
 
-## Current Approach
+## Current Implementation (Proven Working)
 
-Each component file manually:
+### Component Pattern (No Props)
+
+Each component file:
 
 1. Imports `__VAN_HMR__` from `./hmr-runtime`
 2. Uses `__VAN_HMR__.createState(id, initial)` instead of `van.state()`
-3. Calls `__VAN_HMR__.registerRender(id, fn)` to mount and re-mount on HMR
-4. Creates a stable wrapper `div` with a fixed DOM `id` to avoid re-parenting
-5. Exports the wrapper element (not a component call) so `main.ts` appends it once
+3. **Exports the component function** (not a wrapper element)
+4. Exports a factory function that calls `__VAN_HMR__.registerRender(id, componentFn)`
+5. Uses `hot.accept((newModule) => ...)` to get fresh component reference (avoids closure staleness)
 
-The runtime (`hmr-runtime.ts`) is persisted on `window.__VAN_HMR__` so it
-survives Vite module re-execution during HMR.
+```ts
+// counter.ts
+export const CounterComponent = () => {
+  const count = __VAN_HMR__.createState('counter.ts:count', 0);
+  return div(...);
+};
+
+export const CounterSection = () =>
+  __VAN_HMR__.registerRender('counter.ts:CounterSection', CounterComponent);
+
+if (import.meta.hot) {
+  import.meta.hot.accept((newModule) => {
+    if (newModule) {
+      __VAN_HMR__.rerender('counter.ts:CounterSection', newModule.CounterComponent);
+    }
+  });
+}
+```
+
+### Component Pattern (With Props)
+
+For components that accept props:
+
+1. Component function accepts props parameter
+2. Factory function passes props to `registerRender`
+3. Props are stored in render slot and passed through on re-renders
+4. Props updates from call site (e.g., `main.ts`) are automatically applied on HMR
+
+```ts
+// members.prod.ts
+export const MembersComponent = ({ buttonTitle }: { buttonTitle: string }) => {
+  const members = __VAN_HMR__.createState('members.prod.ts:members', []);
+  return div(
+    button({ onclick: ... }, buttonTitle),  // props used here
+    ...
+  );
+};
+
+export const MembersSection = (props: { buttonTitle: string }) =>
+  __VAN_HMR__.registerRender('members.prod.ts:MembersSection', MembersComponent, props);
+
+if (import.meta.hot) {
+  import.meta.hot.accept((newModule) => {
+    if (newModule) {
+      // Props come from stored slot, updated when main.ts changes call site
+      __VAN_HMR__.rerender('members.prod.ts:MembersSection', newModule.MembersComponent);
+    }
+  });
+}
+```
+
+**Call site in `main.ts`:**
+
+```ts
+MembersSection({ buttonTitle: "Add Member" }); // props passed here
+```
+
+### Main Entry Pattern
+
+```ts
+// main.ts
+export const App = () => div(..., CounterSection(), MembersSection());
+
+if (!__VAN_HMR__.renderSlots.has('main.ts:App')) {
+  van.add(document.body, ...__VAN_HMR__.registerRender('main.ts:App', App));
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept((newModule) => {
+    if (newModule) __VAN_HMR__.rerender('main.ts:App', newModule.App);
+  });
+}
+```
+
+### HMR Runtime (`hmr-runtime.ts`)
+
+Persisted on `window.__VAN_HMR__` across module reloads:
+
+- **`stateRegistry`** — Map of `id → State`, survives HMR
+- **`renderSlots`** — Map of `id → { startMarker, endMarker, props }`, stable DOM anchor points + props storage
+- **`createState(id, initial)`** — creates or retrieves state by ID
+- **`registerRender(id, fn, props?)`** — creates comment markers, stores props, returns `[start, element, end]`
+  - On detached markers (parent slot cleared them): re-renders fresh content with stored/new props
+- **`rerender(id, fn, props?)`** — clears between markers, updates stored props if provided, inserts new element with props
+- **`clearBetweenMarkers(slot)`** — removes nodes between markers (works detached or attached)
 
 ---
 
 ## Tested & Working ✅
 
-| Feature                                         | Where                       | Notes                                                        |
-| ----------------------------------------------- | --------------------------- | ------------------------------------------------------------ |
-| Primitive state preservation across HMR         | `counter.ts`                | `counter`, `textInput` survive reload                        |
-| Array state preservation across HMR             | `members.ts`                | `cellMembers`, `cars` survive reload                         |
-| Component re-render on save (clear + re-mount)  | both                        | `registerRender` clears `innerHTML`, re-runs fn              |
-| Multi-file HMR isolation                        | `counter.ts` / `members.ts` | each file self-accepts; editing one doesn't reload the other |
-| Reactive list rendering (array children)        | `members.ts`                | uses comment-node markers from `reactive-lists.ts`           |
-| Text input two-way binding                      | `counter.ts`                | reactive `value` + `oninput`                                 |
-| `van.state` monkey-patch via `window` singleton | `hmr-runtime.ts`            | wraps `van.state` + `van.add` once, persists across reloads  |
-| Stable wrapper div pattern                      | both                        | fixed DOM `id` prevents element loss on re-render            |
+| Feature                               | Where                       | Notes                                                                 |
+| ------------------------------------- | --------------------------- | --------------------------------------------------------------------- |
+| **Primitive state preservation**      | `counter.ts`                | `counter`, `textInput` survive reload                                 |
+| **Array state preservation**          | `members.ts`                | `cellMembers`, `cars` arrays survive reload                           |
+| **Single-save HMR updates**           | all files                   | No double-save required — `newModule` pattern fixes closure staleness |
+| **Nested render slots**               | `main.ts` → `counter.ts`    | Parent clears don't break children — detached markers re-render fresh |
+| **Multi-file HMR isolation**          | `counter.ts` / `members.ts` | Editing one doesn't reload the other                                  |
+| **Reactive list rendering**           | `members.ts`                | Array children via comment markers (from `reactive-lists.ts`)         |
+| **Text input two-way binding**        | `counter.ts`                | Reactive `value` + `oninput`, state preserved                         |
+| **Main entry HMR without duplicates** | `main.ts`                   | Guard check prevents re-appending on HMR                              |
+| **Scroll position preservation**      | all                         | Granular updates don't touch scroll container                         |
+| **Comment marker stability**          | all                         | Markers persist across reloads, enable surgical DOM updates           |
+| **Component props support**           | `members.prod.ts`           | Props stored in render slots, updated from call site on HMR           |
+| **Props reactivity on HMR**           | `main.ts` → `members.prod`  | Editing props in call site updates component without losing state     |
 
 ---
 
-## Known Gaps / Bugs 🐛
+## Key Learnings
 
-- **`registerRender` uses `innerHTML = ''`** — nukes all children including reactive
-  comment markers; any `van.derive` or reactive binding that references a
-  detached node will leak until GC cycle runs.
-- **`stateRegistry` never shrinks** — removed components leave dead state in the
-  Map forever. Need a cleanup pass keyed on connected-ness.
-- **`van.add` wrap tracks `currentRenderContext`** but the context is a single
-  string — concurrent/nested renders would corrupt it. Not a Vite HMR concern
-  now but will be when the plugin injects this into arbitrary call trees.
-- **Manual IDs are fragile** — `'counter.ts:counter'` is a hand-written string;
-  rename the file and state is lost. The plugin must auto-generate stable IDs.
+### 1. Closure Staleness in `hot.accept`
+
+**Problem:** Callbacks close over OLD function references from previous module execution.
+
+**Solution:** Use `hot.accept((newModule) => ...)` and reference `newModule.ComponentFn`.
+
+### 2. Nested Render Slots
+
+**Problem:** Parent `rerender` clears between markers, detaching child markers + content.
+
+**Solution:** `registerRender` detects detached markers (`!startMarker.isConnected`) and re-renders fresh content.
+
+### 3. Main Entry Duplication
+
+**Problem:** `main.ts` re-executes on HMR, `van.add` appends duplicate DOM.
+
+**Solution:** Guard initial mount with `if (!__VAN_HMR__.renderSlots.has(id))`.
+
+### 4. Comment Markers > Wrapper Divs
+
+**Why:** Plugin can inject comment-marker logic universally. Can't inject `document.getElementById` patterns.
+
+### 5. Scroll Restoration Is Free
+
+Granular DOM updates (replace nodes between markers) don't touch scroll containers. Parent scroll offset preserved automatically.
+
+### 6. Component Props Flow
+
+**Problem:** Props change between HMR updates (e.g., editing call site in `main.ts`).
+
+**Solution:** Store props in `renderSlots` alongside markers. On `registerRender`, store props. On `rerender`, update stored props if provided, else use existing. Component always renders with latest props from call site or stored props.
+
+**Flow:**
+
+```
+Initial: main.ts calls MembersSection({ buttonTitle: "Add" })
+  → registerRender stores props in slot
+  → component renders with props
+
+Edit main.ts: change to { buttonTitle: "Add New" }
+  → main.ts re-executes
+  → registerRender called with NEW props
+  → props updated in slot
+  → component re-renders with NEW props + OLD state ✓
+
+Edit members.prod.ts: change component code
+  → hot.accept fires
+  → rerender called WITHOUT props (uses stored props from slot)
+  → component re-renders with OLD props + OLD state ✓
+```
 
 ---
 
-## Features To Add (Ordered by Priority)
+## Known Gaps / Planned Features
 
 ### Phase 1 — Correctness
 
-- [ ] **`van.derive` preservation** — `derive` creates a derived `State`; if the
-      source states survive HMR but the derived state is re-created, listeners
-      double-up. Need to track derived states by ID too or re-derive after reload.
-- [ ] **Multiple instances of the same component** — two `Counter()` calls in
-      the same parent currently share the same `registerRender` slot and clobber
-      each other. Need per-instance keys (e.g. `counter:0`, `counter:1`).
-- [ ] **Proper re-render without `innerHTML = ''`** — replace the wrapper's
-      children using DOM diffing or FLIP: record old root element, run component fn,
-      `replaceChild(newRoot, oldRoot)`. Preserves sibling nodes and avoids nuking
-      unrelated reactive markers.
+- [ ] **`van.derive` preservation** — Derived states need HMR IDs to avoid double-listeners
+- [ ] **Multiple component instances** — Same component called twice needs per-instance keys (`counter:0`, `counter:1`)
+- [ ] **State cleanup/GC** — `stateRegistry` never shrinks; need to detect disconnected components and remove their state
 
 ### Phase 2 — Developer Experience
 
-- [ ] **Error boundaries during HMR** — if the new component fn throws, keep
-      the old DOM + state intact and show an overlay error. Currently a throw
-      leaves the container empty.
-- [ ] **HMR for `main.ts` composition changes** — editing which sections are
-      included in `main.ts` should add/remove sections without full reload.
-- [ ] **Devtools log consolidation** — noisy `console.log` on every state
-      restore; collapse into a single summary line per HMR cycle.
-- [ ] **Cross-file state dependencies** — `state` created in one file, read
-      in another. Registry key must be file-scoped to avoid collisions.
+- [ ] **Error boundaries during HMR** — If new component throws, keep old DOM + overlay error (don't leave blank)
+- [ ] **Dynamic composition changes** — Adding/removing sections in `main.ts` should work without full reload
+- [ ] **Console log cleanup** — Too verbose; add summary mode
 
-### Phase 3 — Plugin Automation (move to `plugin.ts`)
+### Phase 3 — Plugin Automation
 
-- [ ] **Auto-inject `hmr-runtime` import** as `virtual:vanjs-hmr-runtime`
-      (MagicString prepend), remove manual import from every file.
-- [ ] **Auto-wrap `van.state()` calls** → `__VAN_HMR__.createState('file:N', ...)`
-      with stable positional IDs derived from file path + call-site offset.
-- [ ] **Auto-wrap `registerRender`** — detect top-level component call patterns
-      and inject `registerRender` wrappers so user code stays clean.
-- [ ] **Auto-append `import.meta.hot.accept()`** to every transformed file.
-- [ ] **Virtual module** — inline current `hmr-runtime.ts` as the
-      `HMR_RUNTIME_CODE` string in `plugin.ts` (already stubbed, needs the
-      updated runtime from Phase 1–2).
+- [ ] **Auto-inject `virtual:vanjs-hmr-runtime`** — Remove manual import from every file
+- [ ] **Auto-wrap `van.state()` calls** → `__VAN_HMR__.createState('file:line:col', ...)`
+  - Stable positional IDs: hash of file path + AST node position
+- [ ] **Auto-wrap component exports** — Detect `export const Component = () => ...` and inject `registerRender`
+- [ ] **Auto-append `hot.accept` with `newModule` pattern**
+- [ ] **Inline runtime as virtual module string** in `plugin.ts`
 
 ---
 
-## File Map
+## Current File Structure
+
+```
+apps/examples/plugin-test/src/
+  hmr-runtime.ts       ← Manual runtime (source of truth)
+  counter.ts           ← Counter + TextInput (primitive states, no props)
+  members.ts           ← Members + Cars (array states, reactive lists, no props)
+  members.prod.ts      ← Members with props (buttonTitle)
+  main.ts              ← App composition with nested slots + props passing
+
+packages/vite-plugin-vanjs/src/
+  plugin.ts            ← Target for Phase 3 automation
+  index.ts             ← Plugin entry
+```
+
+---
+
+## Next Steps
+
+1. Test `van.derive` preservation (add derived state to counter)
+2. Test multiple component instances (render `Counter()` twice)
+3. Document plugin injection patterns for Phase 3
+4. Move working runtime to `plugin.ts` as `HMR_RUNTIME_CODE` string
