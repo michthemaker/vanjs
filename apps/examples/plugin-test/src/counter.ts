@@ -8,8 +8,12 @@ const { div, h1, p, button, input } = van.tags;
 // ============================================
 
 export const CounterComponent = () => {
-  const counter = __VAN_HMR__.createState("counter.ts:counter", 0);
-  const textInput = __VAN_HMR__.createState("counter.ts:textInput", "Edit me!");
+  const counter = __VAN_HMR__.createState("counter", 0);
+  const textInput = __VAN_HMR__.createState("textInput", "Edit me!");
+
+  // Test van.derive - now preserved across HMR with createDerived
+  const doubled = __VAN_HMR__.createDerived("doubled", () => counter.val * 2);
+  const tripled = __VAN_HMR__.createDerived("tripled", () => counter.val * 3);
 
   return div(
     { style: "padding: 20px;" },
@@ -20,9 +24,11 @@ export const CounterComponent = () => {
         style:
           "margin-bottom: 20px; border: 2px solid #4CAF50; border-radius: 8px; padding: 16px;",
       },
-      h1("Counter Test me"),
-      p(() => `Count : ${counter.val}`),
-      p(() => `Doubled: ${counter.val * 2}`),
+      h1("Counter Test"),
+      p(() => `Count: ${counter.val}`),
+      p(() => `Doubled (inline): ${counter.val * 2}`),
+      p(() => `derived 😉 Doubled : ${doubled.val}`),
+      p(() => `Tripled (derived): ${tripled.val}`),
       button(
         {
           onclick: () => counter.val++,
@@ -55,7 +61,7 @@ export const CounterComponent = () => {
     div(
       {
         style:
-          "margin-bottom: 20px; border: 2px solid #2196F3; border-radius: 8px; padding: 16px;",
+          "margin-bottom: 20px; border: 2px solid #2196F3; border-radius: 8px; padding: 16px; display: none;",
       },
       h1("Text Input "),
       input({
@@ -67,16 +73,21 @@ export const CounterComponent = () => {
         style:
           "padding: 8px; font-size: 16px; width: 300px; border: 1px solid #ccc; border-radius: 4px;",
       }),
-      p(() => `You typed:  ls`),
+      p(() => `You typed: me ls`),
       p(() => `Length: ${textInput.val.length}`)
     )
   );
 };
 
-// Exported as a function — main.ts calls this once on initial mount.
+// Exported as a function — main.ts can call this multiple times for multiple instances.
 // registerRender returns [startMarker, element, endMarker] which van.add flattens.
+// allowMultiple=true enables per-instance state scoping (Counter:0, Counter:1, etc.)
 export const CounterSection = () =>
-  __VAN_HMR__.registerRender("counter.ts:CounterSection", CounterComponent);
+  __VAN_HMR__.registerRender(
+    "counter.ts:CounterSection",
+    CounterComponent,
+    undefined,
+  );
 
 // On HMR: module re-executes (CounterComponent is redefined), then hot.accept
 // fires. We call rerender with the NEW CounterComponent reference so the fresh

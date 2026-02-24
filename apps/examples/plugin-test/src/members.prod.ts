@@ -23,12 +23,12 @@ const randomCars = [
 ];
 
 export const MembersComponent = ({ buttonTitle }: { buttonTitle: string }) => {
-  const cellMembers = __VAN_HMR__.createState('members.prod.ts:cellMembers', [
+  const cellMembers = __VAN_HMR__.createState("members.prod.ts:cellMembers", [
     { name: "Jane", age: 15 },
     { name: "Joy", age: 18 },
   ]);
 
-  const cars = __VAN_HMR__.createState('members.prod.ts:cars', [
+  const cars = __VAN_HMR__.createState("members.prod.ts:cars", [
     { name: "Toyota", year: 2020 },
     { name: "Honda", year: 2019 },
   ]);
@@ -90,7 +90,11 @@ export const MembersComponent = ({ buttonTitle }: { buttonTitle: string }) => {
 
 // Exported factory function — main.ts calls this with props
 export const MembersSection = (props: { buttonTitle: string }) =>
-  __VAN_HMR__.registerRender('members.prod.ts:MembersSection', MembersComponent, props);
+  __VAN_HMR__.registerRender(
+    "members.prod.ts:MembersSection",
+    MembersComponent,
+    props
+  );
 
 // On HMR: module re-executes, hot.accept fires with new component and props from call site
 if (import.meta.hot) {
@@ -98,7 +102,10 @@ if (import.meta.hot) {
     if (newModule) {
       // Note: props are passed from the call site (main.ts), not here
       // rerender will use the stored props from the most recent registerRender call
-      __VAN_HMR__.rerender('members.prod.ts:MembersSection', newModule.MembersComponent);
+      __VAN_HMR__.rerender(
+        "members.prod.ts:MembersSection",
+        newModule.MembersComponent
+      );
     }
   });
 }

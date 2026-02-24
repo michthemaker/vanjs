@@ -21,7 +21,8 @@ export const App = () =>
       "VanJS Multi-File HMR us  me"
     ),
     CounterSection(),
-    MembersSection({ buttonTitle: "Add us Member" })
+    CounterSection(),
+    MembersSection({ buttonTitle: "Add Member" })
   );
 
 // Only mount if this is the first execution (not HMR reload)
