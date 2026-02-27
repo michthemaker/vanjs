@@ -181,11 +181,11 @@ Edit members.prod.ts: change component code
 
 ## Known Gaps / Planned Features
 
-### Phase 1 — Correctness
+### Phase 1 — Correctness ✅
 
-- [ ] **`van.derive` preservation** — Derived states need HMR IDs to avoid double-listeners
-- [ ] **Multiple component instances** — Same component called twice needs per-instance keys (`counter:0`, `counter:1`)
-- [ ] **State cleanup/GC** — `stateRegistry` never shrinks; need to detect disconnected components and remove their state
+- [x] **`van.derive` preservation** — Derived states tracked in `derivedRegistry`, return existing to avoid double-listeners
+- [x] **Multiple component instances** — Auto-increment instance index (`:0`, `:1`), reuse orphaned slots via `freshlyDisconnected` flag
+- [x] **State cleanup/GC** — Periodic cleanup (30s) removes disconnected slots + associated state/derived entries
 
 ### Phase 2 — Developer Experience
 

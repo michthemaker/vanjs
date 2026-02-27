@@ -14,10 +14,12 @@ class VanJSHMRRuntime {
   currentStateContext: string | null = null;
   currentDerivedContext: string | null = null;
   currentInstanceId: string | null = null;
+  currentInstanceId: string | null = null;
   originalVanState: any = null;
   originalVanDerive: any = null;
   initialized = false;
   gcIntervalId: any = null;
+  reusedThisCycle = new Set<string>();
 
   init() {
     if (this.initialized) return;
@@ -103,16 +105,15 @@ class VanJSHMRRuntime {
     let index = 0;
     while (this.renderSlots.has(`${baseId}:${index}`)) {
       const slot = this.renderSlots.get(`${baseId}:${index}`);
-      console.log(`[DEBUG] Checking slot ${baseId}:${index} - connected=${slot?.startMarker.isConnected}, freshlyDisconnected=${slot?.freshlyDisconnected}`);
-      if (slot && !slot.startMarker.isConnected && slot.freshlyDisconnected) {
-        // Reuse this freshly orphaned slot
-        console.log(`[DEBUG] REUSING slot ${baseId}:${index}`);
+      const slotId = `${baseId}:${index}`;
+      if (slot && !slot.startMarker.isConnected && slot.freshlyDisconnected && !this.reusedThisCycle.has(slotId)) {
+        // Reuse this freshly orphaned slot (only once per render cycle)
+        this.reusedThisCycle.add(slotId);
         break;
       }
       index++;
     }
     id = `${baseId}:${index}`;
-    console.log(`[DEBUG] registerRender: baseId="${baseId}" -> finalId="${id}"`);
 
     // Set instance context for state scoping
     const prevInstanceId = this.currentInstanceId;
@@ -191,10 +192,8 @@ class VanJSHMRRuntime {
       this.clearBetweenMarkers(slot);
 
       // Mark all NOW-disconnected slots as freshly disconnected (after clear, before fn call)
-      console.log(`[DEBUG] Marking disconnected child slots after clearing ${slotId}`);
       for (const [childId, childSlot] of this.renderSlots.entries()) {
         if (!childSlot.startMarker.isConnected) {
-          console.log(`[DEBUG] Marking ${childId} as freshlyDisconnected=true`);
           childSlot.freshlyDisconnected = true;
         }
       }
@@ -215,13 +214,12 @@ class VanJSHMRRuntime {
     // Clear freshlyDisconnected flags after render cycle completes
     // This allows multiple components to reuse slots during the same cycle
     queueMicrotask(() => {
-      console.log(`[DEBUG] Clearing freshlyDisconnected flags after microtask`);
       for (const [slotId, slot] of this.renderSlots.entries()) {
         if (slot.freshlyDisconnected) {
-          console.log(`[DEBUG] Clearing freshlyDisconnected for ${slotId}`);
           slot.freshlyDisconnected = false;
         }
       }
+      this.reusedThisCycle.clear();
     });
   }
 
