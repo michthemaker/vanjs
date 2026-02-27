@@ -21,8 +21,6 @@ export const App = () =>
       "VanJS Multi-File HMR Test"
     ),
     CounterSection(),
-    CounterSection(),
-    CounterSection(),
     MembersSection({ buttonTitle: "Add Member" })
   );
 

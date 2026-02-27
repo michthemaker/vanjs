@@ -9,7 +9,7 @@ class VanJSHMRRuntime {
   // Stores comment marker pairs keyed by render slot ID - persists across module reloads
   renderSlots = new Map<
     string,
-    { startMarker: Comment; endMarker: Comment; props?: any; hasRendered?: boolean }
+    { startMarker: Comment; endMarker: Comment; props?: any; freshlyDisconnected?: boolean }
   >();
   currentStateContext: string | null = null;
   currentDerivedContext: string | null = null;
@@ -103,13 +103,16 @@ class VanJSHMRRuntime {
     let index = 0;
     while (this.renderSlots.has(`${baseId}:${index}`)) {
       const slot = this.renderSlots.get(`${baseId}:${index}`);
-      if (slot && !slot.startMarker.isConnected && slot.hasRendered) {
-        // Reuse this orphaned slot
+      console.log(`[DEBUG] Checking slot ${baseId}:${index} - connected=${slot?.startMarker.isConnected}, freshlyDisconnected=${slot?.freshlyDisconnected}`);
+      if (slot && !slot.startMarker.isConnected && slot.freshlyDisconnected) {
+        // Reuse this freshly orphaned slot
+        console.log(`[DEBUG] REUSING slot ${baseId}:${index}`);
         break;
       }
       index++;
     }
     id = `${baseId}:${index}`;
+    console.log(`[DEBUG] registerRender: baseId="${baseId}" -> finalId="${id}"`);
 
     // Set instance context for state scoping
     const prevInstanceId = this.currentInstanceId;
@@ -135,7 +138,7 @@ class VanJSHMRRuntime {
 
     const startMarker = new Comment(`hmr:${id}:start`);
     const endMarker = new Comment(`hmr:${id}:end`);
-    this.renderSlots.set(id, { startMarker, endMarker, props, hasRendered: false });
+    this.renderSlots.set(id, { startMarker, endMarker, props });
 
     const element = fn(props);
     this.currentInstanceId = prevInstanceId;
@@ -159,7 +162,7 @@ class VanJSHMRRuntime {
   rerender(id: string, fn: (props?: any) => Node, props?: any) {
     // Find all matching instances
     const matchingSlots: Array<
-      [string, { startMarker: Comment; endMarker: Comment; props?: any; hasRendered?: boolean }]
+      [string, { startMarker: Comment; endMarker: Comment; props?: any; freshlyDisconnected?: boolean }]
     > = [];
 
     for (const [slotId, slot] of this.renderSlots.entries()) {
@@ -187,6 +190,15 @@ class VanJSHMRRuntime {
 
       this.clearBetweenMarkers(slot);
 
+      // Mark all NOW-disconnected slots as freshly disconnected (after clear, before fn call)
+      console.log(`[DEBUG] Marking disconnected child slots after clearing ${slotId}`);
+      for (const [childId, childSlot] of this.renderSlots.entries()) {
+        if (!childSlot.startMarker.isConnected) {
+          console.log(`[DEBUG] Marking ${childId} as freshlyDisconnected=true`);
+          childSlot.freshlyDisconnected = true;
+        }
+      }
+
       // Set instance context for state restoration
       const prevInstanceId = this.currentInstanceId;
       this.currentInstanceId = slotId;
@@ -198,10 +210,19 @@ class VanJSHMRRuntime {
       const newElement = fn(slot.props);
       this.currentInstanceId = prevInstanceId;
       parent.insertBefore(newElement, endMarker);
-
-      // Mark as rendered so it can be reused if orphaned later
-      slot.hasRendered = true;
     }
+
+    // Clear freshlyDisconnected flags after render cycle completes
+    // This allows multiple components to reuse slots during the same cycle
+    queueMicrotask(() => {
+      console.log(`[DEBUG] Clearing freshlyDisconnected flags after microtask`);
+      for (const [slotId, slot] of this.renderSlots.entries()) {
+        if (slot.freshlyDisconnected) {
+          console.log(`[DEBUG] Clearing freshlyDisconnected for ${slotId}`);
+          slot.freshlyDisconnected = false;
+        }
+      }
+    });
   }
 
   // GC disconnected components (runs every 30s)
