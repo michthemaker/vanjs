@@ -22,6 +22,7 @@ export const App = () =>
     ),
     CounterSection(),
     CounterSection(),
+    CounterSection(),
     MembersSection({ buttonTitle: "Add Member" })
   );
 

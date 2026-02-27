@@ -9,7 +9,7 @@ class VanJSHMRRuntime {
   // Stores comment marker pairs keyed by render slot ID - persists across module reloads
   renderSlots = new Map<
     string,
-    { startMarker: Comment; endMarker: Comment; props?: any }
+    { startMarker: Comment; endMarker: Comment; props?: any; hasRendered?: boolean }
   >();
   currentStateContext: string | null = null;
   currentDerivedContext: string | null = null;
@@ -97,9 +97,16 @@ class VanJSHMRRuntime {
   ): [Comment, Node, Comment] {
     const baseId = id;
 
-    // Find next available instance index (cleanup() frees disconnected slots)
+    // Find next available instance index
+    // Reuse disconnected slots that were previously rendered (orphaned by parent re-render)
+    // Skip disconnected slots that haven't rendered yet (initial mount, not connected)
     let index = 0;
     while (this.renderSlots.has(`${baseId}:${index}`)) {
+      const slot = this.renderSlots.get(`${baseId}:${index}`);
+      if (slot && !slot.startMarker.isConnected && slot.hasRendered) {
+        // Reuse this orphaned slot
+        break;
+      }
       index++;
     }
     id = `${baseId}:${index}`;
@@ -128,7 +135,7 @@ class VanJSHMRRuntime {
 
     const startMarker = new Comment(`hmr:${id}:start`);
     const endMarker = new Comment(`hmr:${id}:end`);
-    this.renderSlots.set(id, { startMarker, endMarker, props });
+    this.renderSlots.set(id, { startMarker, endMarker, props, hasRendered: false });
 
     const element = fn(props);
     this.currentInstanceId = prevInstanceId;
@@ -152,7 +159,7 @@ class VanJSHMRRuntime {
   rerender(id: string, fn: (props?: any) => Node, props?: any) {
     // Find all matching instances
     const matchingSlots: Array<
-      [string, { startMarker: Comment; endMarker: Comment; props?: any }]
+      [string, { startMarker: Comment; endMarker: Comment; props?: any; hasRendered?: boolean }]
     > = [];
 
     for (const [slotId, slot] of this.renderSlots.entries()) {
@@ -191,6 +198,9 @@ class VanJSHMRRuntime {
       const newElement = fn(slot.props);
       this.currentInstanceId = prevInstanceId;
       parent.insertBefore(newElement, endMarker);
+
+      // Mark as rendered so it can be reused if orphaned later
+      slot.hasRendered = true;
     }
   }
 
