@@ -67,36 +67,29 @@ class VanJSHMRRuntime {
     }
   }
 
-  // Create state with a stable HMR ID so it survives module re-execution
-  // If inside an instance context, prepend instance ID to make state unique per instance
+  // Scope state by instance if within a component context
   createState<T>(id: string, initialValue: T) {
     const scopedId = this.currentInstanceId
       ? `${this.currentInstanceId}:${id}`
       : id;
-    console.log(`[DEBUG] createState: id="${id}", currentInstanceId="${this.currentInstanceId}", scopedId="${scopedId}"`);
     this.currentStateContext = scopedId;
     const state = (van as any).state(initialValue);
     this.currentStateContext = null;
     return state as { val: T; readonly oldVal: T };
   }
 
-  // Create derived state with a stable HMR ID so it survives module re-execution
-  // If inside an instance context, prepend instance ID to make derived unique per instance
+  // Scope derived state by instance if within a component context
   createDerived<T>(id: string, fn: () => T) {
     const scopedId = this.currentInstanceId
       ? `${this.currentInstanceId}:${id}`
       : id;
-    console.log(`[DEBUG] createDerived: id="${id}", currentInstanceId="${this.currentInstanceId}", scopedId="${scopedId}"`);
     this.currentDerivedContext = scopedId;
     const derived = (van as any).derive(fn);
     this.currentDerivedContext = null;
     return derived as { val: T; readonly oldVal: T };
   }
 
-  // Initial mount: creates comment markers, renders fn(), returns [start, element, end].
-  // van.add flattens the array so all three nodes land as siblings in the parent.
-  // On subsequent calls (module re-execution without DOM reset), returns existing markers.
-  // Always uses instance index (e.g., id:0, id:1) to support multiple instances from the start.
+  // Create render slot with comment markers. Assigns instance index for multi-instance support.
   registerRender(
     id: string,
     fn: (props?: any) => Node,
@@ -104,30 +97,27 @@ class VanJSHMRRuntime {
   ): [Comment, Node, Comment] {
     const baseId = id;
 
-    // Find next available instance index
-    // cleanup() will remove disconnected slots, freeing up their indices
+    // Find next available instance index (cleanup() frees disconnected slots)
     let index = 0;
     while (this.renderSlots.has(`${baseId}:${index}`)) {
       index++;
     }
     id = `${baseId}:${index}`;
-    console.log(`[DEBUG] registerRender: baseId="${baseId}" -> instanceId="${id}"`);
 
-    // Set instance context so createState/createDerived can scope IDs per instance
+    // Set instance context for state scoping
     const prevInstanceId = this.currentInstanceId;
     this.currentInstanceId = id;
-    console.log(`[DEBUG] Set currentInstanceId="${id}"`);
 
     const existingSlot = this.renderSlots.get(id);
     if (existingSlot) {
       if (!existingSlot.startMarker.isConnected) {
-        this.clearBetweenMarkers(existingSlot); // safety cleanup
+        this.clearBetweenMarkers(existingSlot);
         existingSlot.props = props; // update stored props
         const element = fn(props);
         this.currentInstanceId = prevInstanceId;
         return [existingSlot.startMarker, element, existingSlot.endMarker];
       }
-      // Markers are still live in the DOM. hot.accept will handle re-rendering.
+      // Markers connected, hot.accept handles re-render
       this.currentInstanceId = prevInstanceId;
       return [
         existingSlot.startMarker,
@@ -158,12 +148,9 @@ class VanJSHMRRuntime {
     }
   }
 
-  // Called inside hot.accept with the NEW component function reference.
-  // Clears everything between the existing comment markers and inserts the
-  // freshly-rendered element, preserving marker positions in the DOM tree.
-  // If the component has multiple instances, rerenders all of them.
+  // Re-render component(s) with new code. Finds all instances by ID prefix.
   rerender(id: string, fn: (props?: any) => Node, props?: any) {
-    // Find all slots that match this ID (handles multiple instances like id:0, id:1)
+    // Find all matching instances
     const matchingSlots: Array<
       [string, { startMarker: Comment; endMarker: Comment; props?: any }]
     > = [];
@@ -191,14 +178,13 @@ class VanJSHMRRuntime {
         continue;
       }
 
-      // Remove all nodes between markers
       this.clearBetweenMarkers(slot);
 
-      // Set instance context for state/derived restoration
+      // Set instance context for state restoration
       const prevInstanceId = this.currentInstanceId;
       this.currentInstanceId = slotId;
 
-      // Update stored props and render with new function (createState inside will restore from stateRegistry)
+      // Update props if provided, render with restored state
       if (props !== undefined) {
         slot.props = props;
       }
@@ -208,12 +194,10 @@ class VanJSHMRRuntime {
     }
   }
 
-  // Garbage collect state/derived for disconnected render slots
-  // Called periodically (every 30s) to prevent memory leaks when components are removed
+  // GC disconnected components (runs every 30s)
   cleanup() {
     const disconnectedSlots: string[] = [];
 
-    // Find all disconnected render slots
     for (const [slotId, slot] of this.renderSlots.entries()) {
       if (!slot.startMarker.isConnected) {
         disconnectedSlots.push(slotId);
@@ -224,11 +208,9 @@ class VanJSHMRRuntime {
 
     console.log(`[VanJS HMR] Cleaning up ${disconnectedSlots.length} disconnected component(s)`);
 
-    // Remove render slots and their associated state/derived entries
     for (const slotId of disconnectedSlots) {
       this.renderSlots.delete(slotId);
 
-      // Remove all state entries for this slot (format: slotId:stateKey)
       const statesToDelete: string[] = [];
       for (const key of this.stateRegistry.keys()) {
         if (key === slotId || key.startsWith(`${slotId}:`)) {
@@ -239,7 +221,6 @@ class VanJSHMRRuntime {
         this.stateRegistry.delete(key);
       }
 
-      // Remove all derived entries for this slot
       const derivedToDelete: string[] = [];
       for (const key of this.derivedRegistry.keys()) {
         if (key === slotId || key.startsWith(`${slotId}:`)) {

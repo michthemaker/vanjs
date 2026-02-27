@@ -18,7 +18,7 @@ export const App = () =>
         style:
           "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
       },
-      "VanJS Multi-File HMR us"
+      "VanJS Multi-File HMR Test"
     ),
     CounterSection(),
     CounterSection(),
