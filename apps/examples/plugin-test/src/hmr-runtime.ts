@@ -73,6 +73,7 @@ class VanJSHMRRuntime {
     const scopedId = this.currentInstanceId
       ? `${this.currentInstanceId}:${id}`
       : id;
+    console.log(`[DEBUG] createState: id="${id}", currentInstanceId="${this.currentInstanceId}", scopedId="${scopedId}"`);
     this.currentStateContext = scopedId;
     const state = (van as any).state(initialValue);
     this.currentStateContext = null;
@@ -85,6 +86,7 @@ class VanJSHMRRuntime {
     const scopedId = this.currentInstanceId
       ? `${this.currentInstanceId}:${id}`
       : id;
+    console.log(`[DEBUG] createDerived: id="${id}", currentInstanceId="${this.currentInstanceId}", scopedId="${scopedId}"`);
     this.currentDerivedContext = scopedId;
     const derived = (van as any).derive(fn);
     this.currentDerivedContext = null;
@@ -103,38 +105,18 @@ class VanJSHMRRuntime {
     const baseId = id;
 
     // Find next available instance index
-    // First, look for connected slots that can be reused (for HMR re-render scenario)
-    let connectedIndex = -1;
+    // cleanup() will remove disconnected slots, freeing up their indices
     let index = 0;
     while (this.renderSlots.has(`${baseId}:${index}`)) {
-      const slot = this.renderSlots.get(`${baseId}:${index}`);
-      if (slot && slot.startMarker.isConnected && connectedIndex === -1) {
-        // Found a connected slot - reuse it instead of creating new instance
-        connectedIndex = index;
-      }
       index++;
     }
-
-    // If we found a connected slot, reuse it; otherwise use next available index
-    if (connectedIndex !== -1) {
-      id = `${baseId}:${connectedIndex}`;
-    } else {
-      // Find first available slot number (including disconnected ones to reuse)
-      index = 0;
-      while (this.renderSlots.has(`${baseId}:${index}`)) {
-        const slot = this.renderSlots.get(`${baseId}:${index}`);
-        // Reuse disconnected slot index
-        if (slot && !slot.startMarker.isConnected) {
-          break;
-        }
-        index++;
-      }
-      id = `${baseId}:${index}`;
-    }
+    id = `${baseId}:${index}`;
+    console.log(`[DEBUG] registerRender: baseId="${baseId}" -> instanceId="${id}"`);
 
     // Set instance context so createState/createDerived can scope IDs per instance
     const prevInstanceId = this.currentInstanceId;
     this.currentInstanceId = id;
+    console.log(`[DEBUG] Set currentInstanceId="${id}"`);
 
     const existingSlot = this.renderSlots.get(id);
     if (existingSlot) {
