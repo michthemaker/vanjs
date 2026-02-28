@@ -14,12 +14,20 @@ class VanJSHMRRuntime {
   currentStateContext: string | null = null;
   currentDerivedContext: string | null = null;
   currentInstanceId: string | null = null;
-  currentInstanceId: string | null = null;
   originalVanState: any = null;
   originalVanDerive: any = null;
   initialized = false;
   gcIntervalId: any = null;
   reusedThisCycle = new Set<string>();
+  private errorOverlay: HTMLElement | null = null;
+  /** 'quiet' = errors/warnings only, 'summary' = one-line per HMR update, 'verbose' = full detail */
+  logLevel: 'quiet' | 'summary' | 'verbose' = 'summary';
+
+  private log(level: 'summary' | 'verbose', ...args: any[]) {
+    if (this.logLevel === 'quiet') return;
+    if (level === 'verbose' && this.logLevel !== 'verbose') return;
+    console.log(...args);
+  }
 
   init() {
     if (this.initialized) return;
@@ -159,6 +167,64 @@ class VanJSHMRRuntime {
     }
   }
 
+  // Show error overlay when HMR component render fails
+  private showErrorOverlay(slotId: string, error: unknown) {
+    this.dismissErrorOverlay();
+
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack ?? '' : '';
+
+    const overlay = document.createElement('div');
+    overlay.id = '__vanjs-hmr-error-overlay';
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); color: #fff; z-index: 99999;
+      font-family: monospace; padding: 40px; box-sizing: border-box;
+      overflow: auto; display: flex; flex-direction: column;
+    `;
+
+    overlay.innerHTML = `
+      <div style="max-width: 900px; margin: 0 auto; width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2 style="margin: 0; color: #ff5555; font-size: 20px;">🔥 HMR Error in <code>${slotId}</code></h2>
+          <button id="__vanjs-hmr-dismiss" style="
+            background: none; border: 1px solid #666; color: #ccc; padding: 6px 16px;
+            cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 14px;
+          ">Dismiss (Esc)</button>
+        </div>
+        <p style="color: #ccc; margin: 0 0 8px 0; font-size: 13px;">Old DOM preserved. Fix the error and save to retry.</p>
+        <pre style="
+          background: #1a1a2e; color: #ff6b6b; padding: 20px; border-radius: 8px;
+          overflow: auto; font-size: 14px; line-height: 1.6; white-space: pre-wrap;
+          border: 1px solid #333; margin: 0;
+        ">${this.escapeHtml(message)}
+
+${this.escapeHtml(stack)}</pre>
+      </div>
+    `;
+
+    const dismiss = () => this.dismissErrorOverlay();
+    overlay.querySelector('#__vanjs-hmr-dismiss')?.addEventListener('click', dismiss);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', onKey); }
+    };
+    document.addEventListener('keydown', onKey);
+
+    document.body.appendChild(overlay);
+    this.errorOverlay = overlay;
+  }
+
+  private dismissErrorOverlay() {
+    if (this.errorOverlay) {
+      this.errorOverlay.remove();
+      this.errorOverlay = null;
+    }
+  }
+
+  private escapeHtml(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   // Re-render component(s) with new code. Finds all instances by ID prefix.
   rerender(id: string, fn: (props?: any) => Node, props?: any) {
     // Find all matching instances
@@ -178,6 +244,8 @@ class VanJSHMRRuntime {
       return;
     }
 
+    this.log('summary', `[VanJS HMR] ♻️  ${id} (${matchingSlots.length} instance${matchingSlots.length > 1 ? 's' : ''})`);
+
     // Rerender all matching instances
     for (const [slotId, slot] of matchingSlots) {
       const { startMarker, endMarker } = slot;
@@ -188,11 +256,20 @@ class VanJSHMRRuntime {
         );
         continue;
       }
+      this.log('verbose', `[VanJS HMR]   → rendering ${slotId}`);
+
+      // Save old content before clearing so we can restore on error
+      const savedNodes: Node[] = [];
+      let cur = startMarker.nextSibling;
+      while (cur && cur !== endMarker) {
+        savedNodes.push(cur);
+        cur = cur.nextSibling;
+      }
 
       this.clearBetweenMarkers(slot);
 
       // Mark all NOW-disconnected slots as freshly disconnected (after clear, before fn call)
-      for (const [childId, childSlot] of this.renderSlots.entries()) {
+      for (const [_, childSlot] of this.renderSlots.entries()) {
         if (!childSlot.startMarker.isConnected) {
           childSlot.freshlyDisconnected = true;
         }
@@ -206,15 +283,28 @@ class VanJSHMRRuntime {
       if (props !== undefined) {
         slot.props = props;
       }
-      const newElement = fn(slot.props);
-      this.currentInstanceId = prevInstanceId;
-      parent.insertBefore(newElement, endMarker);
+
+      try {
+        const newElement = fn(slot.props);
+        this.currentInstanceId = prevInstanceId;
+        parent.insertBefore(newElement, endMarker);
+        // Successful render — dismiss any existing error overlay
+        this.dismissErrorOverlay();
+      } catch (error) {
+        this.currentInstanceId = prevInstanceId;
+        // Restore old DOM content
+        for (const node of savedNodes) {
+          parent.insertBefore(node, endMarker);
+        }
+        console.error(`[VanJS HMR] Error rendering "${slotId}":`, error);
+        this.showErrorOverlay(slotId, error);
+      }
     }
 
     // Clear freshlyDisconnected flags after render cycle completes
     // This allows multiple components to reuse slots during the same cycle
     queueMicrotask(() => {
-      for (const [slotId, slot] of this.renderSlots.entries()) {
+      for (const [_, slot] of this.renderSlots.entries()) {
         if (slot.freshlyDisconnected) {
           slot.freshlyDisconnected = false;
         }
@@ -235,7 +325,7 @@ class VanJSHMRRuntime {
 
     if (disconnectedSlots.length === 0) return;
 
-    console.log(`[VanJS HMR] Cleaning up ${disconnectedSlots.length} disconnected component(s)`);
+    this.log('summary', `[VanJS HMR] 🧹 GC: ${disconnectedSlots.length} disconnected component(s)`);
 
     for (const slotId of disconnectedSlots) {
       this.renderSlots.delete(slotId);

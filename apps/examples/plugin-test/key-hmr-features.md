@@ -121,6 +121,8 @@ Persisted on `window.__VAN_HMR__` across module reloads:
 | **Comment marker stability**          | all                         | Markers persist across reloads, enable surgical DOM updates           |
 | **Component props support**           | `members.prod.ts`           | Props stored in render slots, updated from call site on HMR           |
 | **Props reactivity on HMR**           | `main.ts` → `members.prod`  | Editing props in call site updates component without losing state     |
+| **Error boundaries**                  | `hmr-runtime.ts`            | Component throw → old DOM preserved + error overlay, auto-recovers   |
+| **Log level control**                 | `hmr-runtime.ts`            | `quiet` / `summary` (default) / `verbose`, runtime-switchable        |
 
 ---
 
@@ -187,11 +189,11 @@ Edit members.prod.ts: change component code
 - [x] **Multiple component instances** — Auto-increment instance index (`:0`, `:1`), reuse orphaned slots via `freshlyDisconnected` flag
 - [x] **State cleanup/GC** — Periodic cleanup (30s) removes disconnected slots + associated state/derived entries
 
-### Phase 2 — Developer Experience
+### Phase 2 — Developer Experience ✅
 
-- [ ] **Error boundaries during HMR** — If new component throws, keep old DOM + overlay error (don't leave blank)
+- [x] **Error boundaries during HMR** — try/catch in `rerender()`, old DOM restored on error, styled error overlay (dismissible via Esc/button), auto-dismissed on next successful save
+- [x] **Console log cleanup** — `logLevel` property (`'quiet'` | `'summary'` | `'verbose'`), default `'summary'`, controllable at runtime via `__VAN_HMR__.logLevel`
 - [ ] **Dynamic composition changes** — Adding/removing sections in `main.ts` should work without full reload
-- [ ] **Console log cleanup** — Too verbose; add summary mode
 
 ### Phase 3 — Plugin Automation
 
