@@ -24,8 +24,8 @@ export const CounterComponent = () => {
         style:
           "margin-bottom: 20px; border: 2px solid #4CAF50; border-radius: 8px; padding: 16px;",
       },
-      h1("Counter testing meee  "),
-      p(() => `Count: ${counter.val}`),
+      h1("Counter testing meee waitng for us "),
+      p(() => `Count: ${counter.val} + js`),
       p(() => `Doubled (inline): ${counter.val * 2}`),
       p(() => `derived 😉 Doubled : ${doubled.val}`),
       p(() => `Tripled (derived): ${tripled.val}`),
