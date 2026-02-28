@@ -1,7 +1,4 @@
 import van from "@michthemaker/vanjs";
-import { __VAN_HMR__ } from "./hmr-runtime";
-import { CounterSection } from "./counter";
-import { MembersSection } from "./members.prod";
 
 const { div, h1 } = van.tags;
 
@@ -19,23 +16,9 @@ export const App = () =>
           "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
       },
       "VanJS Multi-File HMR Test us  "
-    ),
-    MembersSection({ buttonTitle: "Add Member" }),
-    CounterSection(),
+    )
+    // MembersSection({ buttonTitle: "Add Member" }),
+    // CounterSection()
   );
 
-// Only mount if this is the first execution (not HMR reload)
-if (!__VAN_HMR__.renderSlots.has("main.ts:App:0")) {
-	console.log('yep, mounting app', Array.from(__VAN_HMR__.renderSlots))
-  van.add(document.body, __VAN_HMR__.registerRender("main.ts:App", App));
-	console.log('these are render slots now', Array.from(__VAN_HMR__.renderSlots))
-}
-
-// On HMR of main.ts: re-render the app composition with fresh imports
-if (import.meta.hot) {
-  import.meta.hot.accept((newModule) => {
-    if (newModule) {
-      __VAN_HMR__.rerender("main.ts:App", newModule.App);
-    }
-  });
-}
+van.add(document.body, App());

@@ -121,8 +121,8 @@ Persisted on `window.__VAN_HMR__` across module reloads:
 | **Comment marker stability**          | all                         | Markers persist across reloads, enable surgical DOM updates           |
 | **Component props support**           | `members.prod.ts`           | Props stored in render slots, updated from call site on HMR           |
 | **Props reactivity on HMR**           | `main.ts` → `members.prod`  | Editing props in call site updates component without losing state     |
-| **Error boundaries**                  | `hmr-runtime.ts`            | Component throw → old DOM preserved + error overlay, auto-recovers   |
-| **Log level control**                 | `hmr-runtime.ts`            | `quiet` / `summary` (default) / `verbose`, runtime-switchable        |
+| **Error boundaries**                  | `hmr-runtime.ts`            | Component throw → old DOM preserved + error overlay, auto-recovers    |
+| **Log level control**                 | `hmr-runtime.ts`            | `quiet` / `summary` (default) / `verbose`, runtime-switchable         |
 
 ---
 

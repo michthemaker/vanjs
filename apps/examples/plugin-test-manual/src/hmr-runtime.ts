@@ -9,7 +9,12 @@ class VanJSHMRRuntime {
   // Stores comment marker pairs keyed by render slot ID - persists across module reloads
   renderSlots = new Map<
     string,
-    { startMarker: Comment; endMarker: Comment; props?: any; freshlyDisconnected?: boolean }
+    {
+      startMarker: Comment;
+      endMarker: Comment;
+      props?: any;
+      freshlyDisconnected?: boolean;
+    }
   >();
   currentStateContext: string | null = null;
   currentDerivedContext: string | null = null;
@@ -21,11 +26,11 @@ class VanJSHMRRuntime {
   reusedThisCycle = new Set<string>();
   private errorOverlay: HTMLElement | null = null;
   /** 'quiet' = errors/warnings only, 'summary' = one-line per HMR update, 'verbose' = full detail */
-  logLevel: 'quiet' | 'summary' | 'verbose' = 'summary';
+  logLevel: "quiet" | "summary" | "verbose" = "summary";
 
-  private log(level: 'summary' | 'verbose', ...args: any[]) {
-    if (this.logLevel === 'quiet') return;
-    if (level === 'verbose' && this.logLevel !== 'verbose') return;
+  private log(level: "summary" | "verbose", ...args: any[]) {
+    if (this.logLevel === "quiet") return;
+    if (level === "verbose" && this.logLevel !== "verbose") return;
     console.log(...args);
   }
 
@@ -114,7 +119,12 @@ class VanJSHMRRuntime {
     while (this.renderSlots.has(`${baseId}:${index}`)) {
       const slot = this.renderSlots.get(`${baseId}:${index}`);
       const slotId = `${baseId}:${index}`;
-      if (slot && !slot.startMarker.isConnected && slot.freshlyDisconnected && !this.reusedThisCycle.has(slotId)) {
+      if (
+        slot &&
+        !slot.startMarker.isConnected &&
+        slot.freshlyDisconnected &&
+        !this.reusedThisCycle.has(slotId)
+      ) {
         // Reuse this freshly orphaned slot (only once per render cycle)
         this.reusedThisCycle.add(slotId);
         break;
@@ -172,10 +182,10 @@ class VanJSHMRRuntime {
     this.dismissErrorOverlay();
 
     const message = error instanceof Error ? error.message : String(error);
-    const stack = error instanceof Error ? error.stack ?? '' : '';
+    const stack = error instanceof Error ? (error.stack ?? "") : "";
 
-    const overlay = document.createElement('div');
-    overlay.id = '__vanjs-hmr-error-overlay';
+    const overlay = document.createElement("div");
+    overlay.id = "__vanjs-hmr-error-overlay";
     overlay.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.85); color: #fff; z-index: 99999;
@@ -204,11 +214,16 @@ ${this.escapeHtml(stack)}</pre>
     `;
 
     const dismiss = () => this.dismissErrorOverlay();
-    overlay.querySelector('#__vanjs-hmr-dismiss')?.addEventListener('click', dismiss);
+    overlay
+      .querySelector("#__vanjs-hmr-dismiss")
+      ?.addEventListener("click", dismiss);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', onKey); }
+      if (e.key === "Escape") {
+        dismiss();
+        document.removeEventListener("keydown", onKey);
+      }
     };
-    document.addEventListener('keydown', onKey);
+    document.addEventListener("keydown", onKey);
 
     document.body.appendChild(overlay);
     this.errorOverlay = overlay;
@@ -222,14 +237,25 @@ ${this.escapeHtml(stack)}</pre>
   }
 
   private escapeHtml(str: string): string {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
 
   // Re-render component(s) with new code. Finds all instances by ID prefix.
   rerender(id: string, fn: (props?: any) => Node, props?: any) {
     // Find all matching instances
     const matchingSlots: Array<
-      [string, { startMarker: Comment; endMarker: Comment; props?: any; freshlyDisconnected?: boolean }]
+      [
+        string,
+        {
+          startMarker: Comment;
+          endMarker: Comment;
+          props?: any;
+          freshlyDisconnected?: boolean;
+        },
+      ]
     > = [];
 
     for (const [slotId, slot] of this.renderSlots.entries()) {
@@ -244,7 +270,10 @@ ${this.escapeHtml(stack)}</pre>
       return;
     }
 
-    this.log('summary', `[VanJS HMR] ♻️  ${id} (${matchingSlots.length} instance${matchingSlots.length > 1 ? 's' : ''})`);
+    this.log(
+      "summary",
+      `[VanJS HMR] ♻️  ${id} (${matchingSlots.length} instance${matchingSlots.length > 1 ? "s" : ""})`
+    );
 
     // Rerender all matching instances
     for (const [slotId, slot] of matchingSlots) {
@@ -256,7 +285,7 @@ ${this.escapeHtml(stack)}</pre>
         );
         continue;
       }
-      this.log('verbose', `[VanJS HMR]   → rendering ${slotId}`);
+      this.log("verbose", `[VanJS HMR]   → rendering ${slotId}`);
 
       // Save old content before clearing so we can restore on error
       const savedNodes: Node[] = [];
@@ -325,7 +354,10 @@ ${this.escapeHtml(stack)}</pre>
 
     if (disconnectedSlots.length === 0) return;
 
-    this.log('summary', `[VanJS HMR] 🧹 GC: ${disconnectedSlots.length} disconnected component(s)`);
+    this.log(
+      "summary",
+      `[VanJS HMR] 🧹 GC: ${disconnectedSlots.length} disconnected component(s)`
+    );
 
     for (const slotId of disconnectedSlots) {
       this.renderSlots.delete(slotId);
