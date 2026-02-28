@@ -18,16 +18,17 @@ export const App = () =>
         style:
           "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
       },
-      "VanJS Multi-File HMR Test"
+      "VanJS Multi-File HMR Test "
     ),
+    MembersSection({ buttonTitle: "Add Member" }),
     CounterSection(),
-    CounterSection(),
-    MembersSection({ buttonTitle: "Add Member" })
   );
 
 // Only mount if this is the first execution (not HMR reload)
-if (!__VAN_HMR__.renderSlots.has("main.ts:App")) {
+if (!__VAN_HMR__.renderSlots.has("main.ts:App:0")) {
+	console.log('yep, mounting app', Array.from(__VAN_HMR__.renderSlots))
   van.add(document.body, __VAN_HMR__.registerRender("main.ts:App", App));
+	console.log('these are render slots now', Array.from(__VAN_HMR__.renderSlots))
 }
 
 // On HMR of main.ts: re-render the app composition with fresh imports

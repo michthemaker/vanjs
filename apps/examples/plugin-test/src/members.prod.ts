@@ -42,7 +42,7 @@ export const MembersComponent = ({ buttonTitle }: { buttonTitle: string }) => {
         style:
           "margin-bottom: 20px; border: 2px solid #9C27B0; border-radius: 8px; padding: 16px;",
       },
-      h1("Cell Members"),
+      h1("These are the Cell Members"),
       p(() => `Total: ${cellMembers.val.length} members`),
       ul(() =>
         cellMembers.val.map((m: any) => li(`${m.name} (age: ${m.age})`))

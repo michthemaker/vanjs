@@ -193,7 +193,7 @@ Edit members.prod.ts: change component code
 
 - [x] **Error boundaries during HMR** — try/catch in `rerender()`, old DOM restored on error, styled error overlay (dismissible via Esc/button), auto-dismissed on next successful save
 - [x] **Console log cleanup** — `logLevel` property (`'quiet'` | `'summary'` | `'verbose'`), default `'summary'`, controllable at runtime via `__VAN_HMR__.logLevel`
-- [ ] **Dynamic composition changes** — Adding/removing sections in `main.ts` should work without full reload
+- [x] **Dynamic composition changes** — Reordering, replacing, conditional rendering, deeply nested add/remove all working
 
 ### Phase 3 — Plugin Automation
 

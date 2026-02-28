@@ -159,7 +159,7 @@ if (import.meta.hot) {
 
 - [x] **Error boundaries during HMR** - If new component throws, old DOM is preserved + styled error overlay shown (dismissible via Esc or button). Next successful save auto-dismisses overlay.
 - [x] **Console log cleanup** - `logLevel` property: `'quiet'` (errors only), `'summary'` (default, one-line per HMR update), `'verbose'` (full detail). Controllable via `__VAN_HMR__.logLevel = 'verbose'` in console.
-- [ ] **Dynamic composition changes** - Test more edge cases
+- [x] **Dynamic composition changes** - Reordering, replacing, conditional, deeply nested all working
 
 ### Phase 3 — Plugin Automation
 
