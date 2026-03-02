@@ -1,7 +1,7 @@
 import van from "@michthemaker/vanjs";
 const { div, h1, p, button, input } = van.tags;
 
-export const Counter = () => {
+const Counter = () => {
   const counter = van.state(0);
   const textInput = van.state("Edit Me!");
 
@@ -72,3 +72,10 @@ export const Counter = () => {
     )
   );
 };
+
+
+export const Name = () => {
+  return div("Named ls");
+};
+
+export default Counter
