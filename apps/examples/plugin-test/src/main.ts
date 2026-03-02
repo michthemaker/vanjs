@@ -29,6 +29,6 @@ const App = (props: { name: string }) => {
     )
   );
 };
-van.add(document.body, App({name: 'Mich'}));
+van.add(document.body, App({name: 'Miee'}));
 
 export default App

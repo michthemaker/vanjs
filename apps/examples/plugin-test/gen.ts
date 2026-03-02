@@ -32,7 +32,7 @@ const App = (props: { name: string }) => {
 };
 (function() {
   if (!__VAN_HMR__.renderSlots.has('src/main.ts:App:0')) {
-    van.add(document.body, __VAN_HMR__.registerRender('src/main.ts:App', App, {name: 'Mich'}));
+    van.add(document.body, __VAN_HMR__.registerRender('src/main.ts:App', App, {name: 'Miee'}));
   }
 }());
 
@@ -42,7 +42,7 @@ export default App
 if (import.meta.hot) {
   import.meta.hot.accept((newModule) => {
     if (newModule) {
-      __VAN_HMR__.rerender('src/main.ts:App', newModule.default, {name: 'Mich'});
+      __VAN_HMR__.rerender('src/main.ts:App', newModule.default, {name: 'Miee'});
     }
   });
 }
