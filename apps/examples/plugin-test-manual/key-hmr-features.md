@@ -218,7 +218,9 @@ Edit members.prod.ts: change component code
 
 - [x] **Wrap `van.add()` calls with render slot guards** — For entry files:
   - Transforms inline: `van.add(target, Component(props))` → guarded IIFE with `registerRender`
-  - Props from call site passed as 3rd arg to `registerRender`
+  - Props from call site passed as 3rd arg to both `registerRender` AND `rerender`
+  - Ensures props stay in sync when entry file is edited
+  - Note: Non-entry files don't need props in rerender — their props flow from parent components via stored slot props
   - Example output:
     ```ts
     (function () {
@@ -229,6 +231,14 @@ Edit members.prod.ts: change component code
         );
       }
     })();
+    // ...
+    if (import.meta.hot) {
+      import.meta.hot.accept((newModule) => {
+        if (newModule) {
+          __VAN_HMR__.rerender("src/main.ts:App", newModule.default, { name: "me" });
+        }
+      });
+    }
     ```
 
 ---

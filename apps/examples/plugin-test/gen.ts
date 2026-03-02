@@ -17,6 +17,7 @@ const App = (props: { name: string }) => {
           "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
       },
       "VanJS Multi-File HMR Test - me us ",
+      props.name,
       myName
     ),
     button(
@@ -31,7 +32,7 @@ const App = (props: { name: string }) => {
 };
 (function() {
   if (!__VAN_HMR__.renderSlots.has('src/main.ts:App:0')) {
-    van.add(document.body, __VAN_HMR__.registerRender('src/main.ts:App', App, { name: "Mich" }));
+    van.add(document.body, __VAN_HMR__.registerRender('src/main.ts:App', App, {name: 'Mich'}));
   }
 }());
 
@@ -41,7 +42,7 @@ export default App
 if (import.meta.hot) {
   import.meta.hot.accept((newModule) => {
     if (newModule) {
-      __VAN_HMR__.rerender('src/main.ts:App', newModule.default);
+      __VAN_HMR__.rerender('src/main.ts:App', newModule.default, {name: 'Mich'});
     }
   });
 }

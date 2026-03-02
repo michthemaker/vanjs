@@ -16,6 +16,7 @@ const App = (props: { name: string }) => {
           "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
       },
       "VanJS Multi-File HMR Test - me us ",
+      props.name,
       myName
     ),
     button(
@@ -28,6 +29,6 @@ const App = (props: { name: string }) => {
     )
   );
 };
-van.add(document.body, App({ name: "Mich" }));
+van.add(document.body, App({name: 'Mich'}));
 
 export default App

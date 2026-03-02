@@ -183,6 +183,9 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
       s.prepend(`import { __VAN_HMR__ } from 'virtual:vanjs-hmr-runtime';\n`);
 
       // --- 5. For entry files: transform van.add() calls inline ---
+      // Track props extracted from van.add calls (for entry file rerender)
+      const entryComponentProps: Map<string, string> = new Map();
+
       if (isEntry && components.length > 0) {
         // Match van.add(target, Component(props)) or van.add(target, Component())
         // Captures: target, componentName, props (if any)
@@ -201,6 +204,11 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
             const slotId = `${relPath}:${componentName}`;
             const start = match.index;
             const end = start + fullMatch.length;
+
+            // Store props for use in rerender
+            if (propsArg) {
+              entryComponentProps.set(componentName, propsArg);
+            }
 
             // Build replacement with guard + registerRender
             let replacement = `(function() {\n`;
@@ -242,7 +250,13 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
           const moduleRef = isDefault
             ? "newModule.default"
             : `newModule.${name}`;
-          appendCode += `      __VAN_HMR__.rerender('${slotId}', ${moduleRef});\n`;
+          // For entry files, pass props to rerender so they stay in sync with call site
+          const propsArg = isEntry ? entryComponentProps.get(name) : undefined;
+          if (propsArg) {
+            appendCode += `      __VAN_HMR__.rerender('${slotId}', ${moduleRef}, ${propsArg});\n`;
+          } else {
+            appendCode += `      __VAN_HMR__.rerender('${slotId}', ${moduleRef});\n`;
+          }
         }
         appendCode += `    }\n`;
         appendCode += `  });\n`;
