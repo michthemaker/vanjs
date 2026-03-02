@@ -1,22 +1,16 @@
 import van from "@michthemaker/vanjs";
-import { __VAN_HMR__ } from "./hmr-runtime";
-
 const { div, h1, p, button, input } = van.tags;
 
-// ============================================
-// Counter + Text Input Component
-// ============================================
-
-export const CounterComponent = () => {
-  const counter = __VAN_HMR__.createState("counter", 0);
-  const textInput = __VAN_HMR__.createState("textInput", "Edit me!");
+export const Counter = () => {
+  const counter = van.state(0);
+  const textInput = van.state("Edit Me!",);
 
   // Test van.derive - now preserved across HMR with createDerived
-  const doubled = __VAN_HMR__.createDerived("doubled", () => counter.val * 2);
-  const tripled = __VAN_HMR__.createDerived("tripled", () => counter.val * 3);
+  const doubled = van.derive(() => counter.val * 2);
+  const tripled = van.derive(() => counter.val * 3);
 
   return div(
-    { style: "padding: 20px;" },
+    { style: "padding: 180px;" },
 
     // Counter section
     div(
@@ -77,27 +71,4 @@ export const CounterComponent = () => {
       p(() => `Length: ${textInput.val.length}`)
     )
   );
-};
-
-// Exported as a function — main.ts can call this multiple times for multiple instances.
-// registerRender returns [startMarker, element, endMarker] which van.add flattens.
-// allowMultiple=true enables per-instance state scoping (Counter:0, Counter:1, etc.)
-export const $$__hmr__Counter = () =>
-  __VAN_HMR__.registerRender(
-    "counter.ts:$$__hmr__Counter",
-    CounterComponent,
-    undefined
-  );
-
-// On HMR: module re-executes (CounterComponent is redefined), then hot.accept
-// fires. We call rerender with the NEW CounterComponent reference so the fresh
-// code runs between the existing comment markers, with state preserved.
-if (import.meta.hot) {
-  import.meta.hot.accept((newModule) => {
-    if (newModule)
-      __VAN_HMR__.rerender(
-        "counter.ts:$$__hmr__Counter",
-        newModule.CounterComponent
-      );
-  });
 }

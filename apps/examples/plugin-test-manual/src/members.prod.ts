@@ -89,9 +89,9 @@ export const MembersComponent = ({ buttonTitle }: { buttonTitle: string }) => {
 };
 
 // Exported factory function — main.ts calls this with props
-export const MembersSection = (props: { buttonTitle: string }) =>
+export const $$__hmr__Members = (props: { buttonTitle: string }) =>
   __VAN_HMR__.registerRender(
-    "members.prod.ts:MembersSection",
+    "members.prod.ts:$$__hmr__Members",
     MembersComponent,
     props
   );
@@ -103,7 +103,7 @@ if (import.meta.hot) {
       // Note: props are passed from the call site (main.ts), not here
       // rerender will use the stored props from the most recent registerRender call
       __VAN_HMR__.rerender(
-        "members.prod.ts:MembersSection",
+        "members.prod.ts:$$__hmr__Members",
         newModule.MembersComponent
       );
     }

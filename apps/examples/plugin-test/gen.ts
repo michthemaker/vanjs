@@ -1,11 +1,20 @@
 import { __VAN_HMR__ } from 'virtual:vanjs-hmr-runtime';
 import van from "@michthemaker/vanjs";
+// import { Counter } from './counter'
 
 const { div, h1, button } = van.tags;
 
+const Name = () => {
+	return (
+		div(
+			'Named ls'
+		)
+	)
+}
+
 // Component with props - using named export
 const App = (props: { name: string }) => {
-  const myName = __VAN_HMR__.createState('src/main.ts:7:18', "Mich");
+  const myName = __VAN_HMR__.createState('src/main.ts:16:18', "Mich");
   return div(
     {
       style:
@@ -20,9 +29,10 @@ const App = (props: { name: string }) => {
       props.name,
       myName
     ),
+    Name(),
     button(
       {
-        onclick(e) {
+        onclick() {
           myName.val = "Michthemaker";
         },
       },
@@ -32,7 +42,7 @@ const App = (props: { name: string }) => {
 };
 (function() {
   if (!__VAN_HMR__.renderSlots.has('src/main.ts:App:0')) {
-    van.add(document.body, __VAN_HMR__.registerRender('src/main.ts:App', App, {name: 'Miee'}));
+    van.add(document.body, __VAN_HMR__.registerRender('src/main.ts:App', App, {name: 'Mice'}));
   }
 }());
 
@@ -42,7 +52,7 @@ export default App
 if (import.meta.hot) {
   import.meta.hot.accept((newModule) => {
     if (newModule) {
-      __VAN_HMR__.rerender('src/main.ts:App', newModule.default, {name: 'Miee'});
+      __VAN_HMR__.rerender('src/main.ts:App', newModule.default, {name: 'Mice'});
     }
   });
 }

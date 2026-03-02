@@ -1,6 +1,15 @@
 import van from "@michthemaker/vanjs";
+// import { Counter } from './counter'
 
 const { div, h1, button } = van.tags;
+
+const Name = () => {
+	return (
+		div(
+			'Named ls'
+		)
+	)
+}
 
 // Component with props - using named export
 const App = (props: { name: string }) => {
@@ -19,9 +28,10 @@ const App = (props: { name: string }) => {
       props.name,
       myName
     ),
+    Name(),
     button(
       {
-        onclick(e) {
+        onclick() {
           myName.val = "Michthemaker";
         },
       },
@@ -29,6 +39,6 @@ const App = (props: { name: string }) => {
     )
   );
 };
-van.add(document.body, App({name: 'Miee'}));
+van.add(document.body, App({name: 'Mice'}));
 
 export default App
