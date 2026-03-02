@@ -4,7 +4,7 @@ const { div, h1 } = van.tags;
 
 // Wrap the entire composition in a render slot so HMR updates replace
 // instead of append. Export the component for hot.accept to use newModule.
-export const App = () =>
+export const Name = (props: {name: string}) =>
   div(
     {
       style:
@@ -15,10 +15,10 @@ export const App = () =>
         style:
           "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
       },
-      "VanJS Multi-File HMR Test us  "
+      "VanJS Multi-File HMR Test"
     )
     // MembersSection({ buttonTitle: "Add Member" }),
     // CounterSection()
   );
 
-van.add(document.body, App());
+van.add(document.body, App({ name: 'me' }));

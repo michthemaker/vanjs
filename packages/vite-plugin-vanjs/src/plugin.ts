@@ -103,8 +103,9 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
           // Entry: guard mount, registerRender the App root
           const appComponent = components[0];
           const slotId = `${relPath}:${appComponent}`;
-          appendCode += `\n// [VanJS HMR] Entry mount guard\n`;
-          appendCode += `if (!__VAN_HMR__.renderSlots.has('${slotId}')) {\n`;
+          appendCode += `\n// [VanJS HMR] Entry mount guard`;
+          appendCode += `\n// use 0 as the slot index for the App root\n`;
+          appendCode += `if (!__VAN_HMR__.renderSlots.has('${slotId}:0')) {\n`;
           appendCode += `  van.add(document.body, __VAN_HMR__.registerRender('${slotId}', ${appComponent}));\n`;
           appendCode += `}\n`;
         } else {
