@@ -235,7 +235,9 @@ Edit members.prod.ts: change component code
     if (import.meta.hot) {
       import.meta.hot.accept((newModule) => {
         if (newModule) {
-          __VAN_HMR__.rerender("src/main.ts:App", newModule.default, { name: "me" });
+          __VAN_HMR__.rerender("src/main.ts:App", newModule.default, {
+            name: "me",
+          });
         }
       });
     }

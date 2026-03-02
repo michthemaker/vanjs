@@ -3,7 +3,7 @@ const { div, h1, p, button, input } = van.tags;
 
 export const Counter = () => {
   const counter = van.state(0);
-  const textInput = van.state("Edit Me!",);
+  const textInput = van.state("Edit Me!");
 
   // Test van.derive - now preserved across HMR with createDerived
   const doubled = van.derive(() => counter.val * 2);
@@ -71,4 +71,4 @@ export const Counter = () => {
       p(() => `Length: ${textInput.val.length}`)
     )
   );
-}
+};

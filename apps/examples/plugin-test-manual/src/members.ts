@@ -95,7 +95,10 @@ export const MembersComponent = () => {
 // Exported as a function — main.ts calls this once on initial mount.
 // registerRender returns [startMarker, element, endMarker] which van.add flattens.
 export const $$__hmr__MembersComponent = () =>
-  __VAN_HMR__.registerRender("members.ts:$$__hmr__MembersComponent", MembersComponent);
+  __VAN_HMR__.registerRender(
+    "members.ts:$$__hmr__MembersComponent",
+    MembersComponent
+  );
 
 // On HMR: module re-executes (MembersComponent is redefined), then hot.accept
 // fires. We call rerender with the NEW MembersComponent reference so the fresh

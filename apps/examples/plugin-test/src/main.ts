@@ -4,12 +4,8 @@ import van from "@michthemaker/vanjs";
 const { div, h1, button } = van.tags;
 
 const Name = () => {
-	return (
-		div(
-			'Named ls'
-		)
-	)
-}
+  return div("Named ls");
+};
 
 // Component with props - using named export
 const App = (props: { name: string }) => {
@@ -39,6 +35,6 @@ const App = (props: { name: string }) => {
     )
   );
 };
-van.add(document.body, App({name: 'Mice'}));
+van.add(document.body, App({ name: "Mice" }));
 
-export default App
+export default App;
