@@ -85,32 +85,148 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
         );
       }
 
-      // --- 3. Detect PascalCase exported component functions ---
-      const componentPattern = /export\s+const\s+([A-Z][a-zA-Z0-9]*)\s*=/g;
-      const components: string[] = [];
-      while ((match = componentPattern.exec(code)) !== null) {
-        components.push(match[1]);
+      // --- 3. Detect VanJS components ---
+      // First, extract tag names from van.tags destructuring
+      const tagNames = new Set<string>();
+      const tagsDestructurePattern =
+        /const\s*\{\s*([^}]+)\s*\}\s*=\s*van\.tags/g;
+      while ((match = tagsDestructurePattern.exec(code)) !== null) {
+        const names = match[1].split(",").map((s) => s.trim());
+        for (const name of names) {
+          if (name) tagNames.add(name);
+        }
+      }
+
+      // Helper: check if a function body uses van.tags
+      const usesVanTags = (body: string): boolean => {
+        for (const tag of tagNames) {
+          const tagCallPattern = new RegExp(`\\b${tag}\\s*[(\`]`);
+          if (tagCallPattern.test(body)) return true;
+        }
+        return false;
+      };
+
+      // Helper: extract function body from a position after =>
+      const extractFunctionBody = (startPos: number): string => {
+        let depth = 0;
+        let bodyStart = startPos;
+        let bodyEnd = startPos;
+        let inBody = false;
+
+        for (let i = startPos; i < code.length; i++) {
+          const char = code[i];
+          if (!inBody && /\s/.test(char)) continue;
+
+          if (!inBody) {
+            inBody = true;
+            bodyStart = i;
+          }
+
+          if (char === "(" || char === "{" || char === "[") depth++;
+          if (char === ")" || char === "}" || char === "]") depth--;
+
+          if (depth === 0 && (char === ";" || char === "\n")) {
+            bodyEnd = i;
+            break;
+          }
+          if (depth < 0) {
+            bodyEnd = i;
+            break;
+          }
+        }
+        return code.slice(bodyStart, bodyEnd);
+      };
+
+      // Track components: { name, isDefault }
+      const components: Array<{ name: string; isDefault: boolean }> = [];
+      let defaultExportName: string | null = null;
+
+      // Detect `export default Name` at end of file
+      const defaultExportPattern =
+        /export\s+default\s+([A-Z][a-zA-Z0-9]*)\s*;?/g;
+      while ((match = defaultExportPattern.exec(code)) !== null) {
+        defaultExportName = match[1];
+      }
+
+      // Pattern 1: export const Name = (...) => ...
+      const exportConstPattern =
+        /export\s+const\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)\s*=>/g;
+      while ((match = exportConstPattern.exec(code)) !== null) {
+        const name = match[1];
+        const body = extractFunctionBody(match.index + match[0].length);
+        if (usesVanTags(body)) {
+          // Named export, but could also be re-exported as default
+          const isDefault = name === defaultExportName;
+          components.push({ name, isDefault });
+        }
+      }
+
+      // Pattern 2: const Name = (...) => ... (for default exports only)
+      if (defaultExportName) {
+        // Skip if already detected as export const
+        if (!components.some((c) => c.name === defaultExportName)) {
+          const constPattern = new RegExp(
+            `const\\s+(${defaultExportName})\\s*=\\s*(\\([^)]*\\)|[a-zA-Z_][a-zA-Z0-9_]*)\\s*=>`,
+            "g"
+          );
+          while ((match = constPattern.exec(code)) !== null) {
+            const name = match[1];
+            const body = extractFunctionBody(match.index + match[0].length);
+            if (usesVanTags(body)) {
+              components.push({ name, isDefault: true });
+            }
+          }
+        }
       }
 
       // --- 4. Inject __VAN_HMR__ import ---
       s.prepend(`import { __VAN_HMR__ } from 'virtual:vanjs-hmr-runtime';\n`);
 
-      // --- 5. Append registerRender wrappers + hot.accept ---
+      // --- 5. For entry files: transform van.add() calls inline ---
+      if (isEntry && components.length > 0) {
+        // Match van.add(target, Component(props)) or van.add(target, Component())
+        // Captures: target, componentName, props (if any)
+        const vanAddPattern =
+          /van\.add\s*\(\s*([^,]+)\s*,\s*([A-Z][a-zA-Z0-9]*)\s*\(([^)]*)\)\s*\)/g;
+
+        while ((match = vanAddPattern.exec(code)) !== null) {
+          const fullMatch = match[0];
+          const target = match[1].trim();
+          const componentName = match[2];
+          const propsArg = match[3].trim();
+
+          // Only transform if componentName is in our detected components
+          const comp = components.find((c) => c.name === componentName);
+          if (comp) {
+            const slotId = `${relPath}:${componentName}`;
+            const start = match.index;
+            const end = start + fullMatch.length;
+
+            // Build replacement with guard + registerRender
+            let replacement = `(function() {\n`;
+            replacement += `  if (!__VAN_HMR__.renderSlots.has('${slotId}:0')) {\n`;
+            if (propsArg) {
+              // Has props - pass as 3rd argument
+              replacement += `    van.add(${target}, __VAN_HMR__.registerRender('${slotId}', ${componentName}, ${propsArg}));\n`;
+            } else {
+              // No props
+              replacement += `    van.add(${target}, __VAN_HMR__.registerRender('${slotId}', ${componentName}));\n`;
+            }
+            replacement += `  }\n`;
+            replacement += `}())`;
+
+            s.overwrite(start, end, replacement);
+          }
+        }
+      }
+
+      // --- 6. Append Section factories (non-entry) + hot.accept ---
       if (components.length > 0) {
         let appendCode = "\n";
 
-        if (isEntry) {
-          // Entry: guard mount, registerRender the App root
-          const appComponent = components[0];
-          const slotId = `${relPath}:${appComponent}`;
-          appendCode += `\n// [VanJS HMR] Entry mount guard`;
-          appendCode += `\n// use 0 as the slot index for the App root\n`;
-          appendCode += `if (!__VAN_HMR__.renderSlots.has('${slotId}:0')) {\n`;
-          appendCode += `  van.add(document.body, __VAN_HMR__.registerRender('${slotId}', ${appComponent}));\n`;
-          appendCode += `}\n`;
-        } else {
+        if (!isEntry) {
           // Non-entry: export Section factory for each component
-          for (const name of components) {
+          for (const { name } of components) {
             const slotId = `${relPath}:${name}`;
             appendCode += `export const ${name}Section = (props) => __VAN_HMR__.registerRender('${slotId}', ${name}, props);\n`;
           }
@@ -120,9 +236,13 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
         appendCode += `\nif (import.meta.hot) {\n`;
         appendCode += `  import.meta.hot.accept((newModule) => {\n`;
         appendCode += `    if (newModule) {\n`;
-        for (const name of components) {
+        for (const { name, isDefault } of components) {
           const slotId = `${relPath}:${name}`;
-          appendCode += `      __VAN_HMR__.rerender('${slotId}', newModule.${name});\n`;
+          // Use newModule.default for default exports, newModule.Name for named exports
+          const moduleRef = isDefault
+            ? "newModule.default"
+            : `newModule.${name}`;
+          appendCode += `      __VAN_HMR__.rerender('${slotId}', ${moduleRef});\n`;
         }
         appendCode += `    }\n`;
         appendCode += `  });\n`;

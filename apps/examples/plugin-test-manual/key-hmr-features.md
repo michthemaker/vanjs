@@ -200,36 +200,36 @@ Edit members.prod.ts: change component code
 - [x] **Auto-inject `virtual:vanjs-hmr-runtime`** — Remove manual import from every file
 - [x] **Auto-wrap `van.state()` calls** → `__VAN_HMR__.createState('file:line:col', ...)`
   - Stable positional IDs: hash of file path + AST node position
-- [ ] **Auto-wrap component exports** — Detect `export const Component = () => ...` and inject `registerRender`
+- [x] **Auto-wrap component exports** — Detect `export const Component = () => ...` and inject `registerRender`
 - [x] **Auto-append `hot.accept` with `newModule` pattern**
 - [x] **Inline runtime as virtual module string** in `plugin.ts`
 
-### Phase 3.1 — Component Detection & Entry File Handling (Current Focus)
+### Phase 3.1 — Component Detection & Entry File Handling ✅
 
-**Issues with current implementation:**
+- [x] **Robust component detection** — No longer just PascalCase exports
+  - Extracts tag names from `const { div, h1 } = van.tags`
+  - Only detects functions that actually USE those tags in their body
+  - Service functions (e.g., `UserService`) are now correctly ignored
 
-- [ ] **Robust component detection** — Current regex only matches `export const PascalCase =`
-  - Problem: False positives on service functions (e.g., `export const UserService = ...`)
-  - Problem: Misses default exports at bottom (e.g., `export default App`)
-  - Solution: Detect VanJS components by checking if the function returns DOM elements (uses `van.tags`)
+- [x] **Handle default exports** — Support `export default ComponentName`
+  - Detects `const Name = ...` when followed by `export default Name`
+  - Includes in HMR handling alongside named exports
+  - Uses `newModule.default` for default exports, `newModule.ComponentName` for named exports
 
-- [ ] **Handle default exports** — Support `export default ComponentName` at end of file
-  - Should link to the component definition and include in HMR handling
-
-- [ ] **Wrap `van.add()` calls with render slot guards** — For entry files:
-  - Current: Only wraps mount in `if (!renderSlots.has(...))` guard
-  - Missing: The `van.add()` line itself should use `registerRender`
-  - Example transform for `van.add(document.body, App({ name: 'me' }))`:
+- [x] **Wrap `van.add()` calls with render slot guards** — For entry files:
+  - Transforms inline: `van.add(target, Component(props))` → guarded IIFE with `registerRender`
+  - Props from call site passed as 3rd arg to `registerRender`
+  - Example output:
     ```ts
-    // Before
-    van.add(document.body, App({ name: 'me' }));
-
-    // After (if component has props and call passes arguments)
-    if (!__VAN_HMR__.renderSlots.has('src/main.ts:App:0')) {
-      van.add(document.body, __VAN_HMR__.registerRender('src/main.ts:App', App, { name: 'me' }));
-    }
+    (function () {
+      if (!__VAN_HMR__.renderSlots.has("src/main.ts:App:0")) {
+        van.add(
+          document.body,
+          __VAN_HMR__.registerRender("src/main.ts:App", App, { name: "me" })
+        );
+      }
+    })();
     ```
-  - Props from call site (`{ name: 'me' }`) should be passed as 3rd arg to `registerRender`
 
 ---
 
@@ -256,9 +256,8 @@ packages/vite-plugin-vanjs/src/
 2. ~~Test multiple component instances (render `Counter()` twice)~~
 3. ~~Document plugin injection patterns for Phase 3~~
 4. ~~Move working runtime to `plugin.ts` as `HMR_RUNTIME_CODE` string~~
+5. ~~Fix `van.add()` wrapping in entry files to use `registerRender` with props~~
+6. ~~Improve component detection (not just PascalCase exports)~~
+7. ~~Handle default exports~~
 
-**Current Focus: Phase 3.1 — Entry File Handling**
-
-1. Fix `van.add()` wrapping in entry files to use `registerRender` with props
-2. Improve component detection (not just PascalCase exports)
-3. Handle default exports
+**Phase 3.1 Complete!** All entry file handling issues resolved.
