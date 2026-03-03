@@ -1,5 +1,5 @@
 import van from "@michthemaker/vanjs";
-import NamedComponent, { Counter }  from './counter'
+import { Counter } from './barrel-export'
 
 const { div, h1, button } = van.tags;
 
@@ -21,7 +21,6 @@ const App = (props: { name: string }) => {
       myName
     ),
     Counter(),
-    NamedComponent(),
     button(
       {
         onclick() {

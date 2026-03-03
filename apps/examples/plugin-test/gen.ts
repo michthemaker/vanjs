@@ -2,7 +2,7 @@ import { __VAN_HMR__ } from 'virtual:vanjs-hmr-runtime';
 import van from "@michthemaker/vanjs";
 const { div, h1, p, button, input } = van.tags;
 
-export const $$__hmr__Counter = () => {
+export const $$__hmr__Counter = (): any => {
   const counter = __VAN_HMR__.createState('src/counter.ts:5:19', 0);
   const textInput = __VAN_HMR__.createState('src/counter.ts:6:21', "Edit Me!");
 
@@ -11,7 +11,7 @@ export const $$__hmr__Counter = () => {
   const tripled = __VAN_HMR__.createDerived('src/counter.ts:10:19', () => counter.val * 3);
 
   return div(
-    { style: "padding: 10px;" },
+    { style: "padding: 80px;" },
 
     // Counter section
     div(
@@ -74,24 +74,12 @@ export const $$__hmr__Counter = () => {
   );
 };
 
-export const $$__hmr__NamedComponent = () => {
-	return (
-		div(
-			'Named comonent apa'
-		)
-	)
-}
-
-const NamedComponent = (props) => __VAN_HMR__.registerRender('src/counter.ts:NamedComponent', $$__hmr__NamedComponent, props);
-export default NamedComponent
-
 export const Counter = (props) => __VAN_HMR__.registerRender('src/counter.ts:Counter', $$__hmr__Counter, props);
 
 if (import.meta.hot) {
   import.meta.hot.accept((newModule) => {
     if (newModule) {
       __VAN_HMR__.rerender('src/counter.ts:Counter', newModule.$$__hmr__Counter);
-      __VAN_HMR__.rerender('src/counter.ts:NamedComponent', newModule.$$__hmr__NamedComponent);
     }
   });
 }

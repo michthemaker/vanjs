@@ -143,7 +143,7 @@ function detectComponents(code: string): ComponentInfo[] {
 
   // Pattern 1: export const Name = (...) => ...
   const exportConstPattern =
-    /export\s+const\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)\s*=>/g;
+      /export\s+const\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(?:async\s+)?(?:<[^>]*>\s*)?(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\s*:\s*[^{=>][^=>]*?)?\s*=>/g;
   while ((match = exportConstPattern.exec(code)) !== null) {
     const name = match[1];
     const body = extractFunctionBody(match.index + match[0].length);
@@ -163,10 +163,10 @@ function detectComponents(code: string): ComponentInfo[] {
   // Pattern 2: const Name = (...) => ... (for default exports only)
   if (defaultExportName) {
     if (!components.some((c) => c.name === defaultExportName)) {
-      const constPattern = new RegExp(
-        `const\\s+(${defaultExportName})\\s*=\\s*(\\([^)]*\\)|[a-zA-Z_][a-zA-Z0-9_]*)\\s*=>`,
-        "g"
-      );
+    const constPattern = new RegExp(
+            `const\\s+(${defaultExportName})\\s*=\\s*(?:async\\s+)?(?:<[^>]*>\\s*)?(\\([^)]*\\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\\s*:\\s*[^{=>][^=>]*?)?\\s*=>`,
+            "g"
+          );
       while ((match = constPattern.exec(code)) !== null) {
         const name = match[1];
         const body = extractFunctionBody(match.index + match[0].length);

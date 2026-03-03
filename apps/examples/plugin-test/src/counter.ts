@@ -1,7 +1,7 @@
 import van from "@michthemaker/vanjs";
 const { div, h1, p, button, input } = van.tags;
 
-export const Counter = () => {
+export const Counter = (): any => {
   const counter = van.state(0);
   const textInput = van.state("Edit Me!");
 
@@ -10,7 +10,7 @@ export const Counter = () => {
   const tripled = van.derive(() => counter.val * 3);
 
   return div(
-    { style: "padding: 10px;" },
+    { style: "padding: 80px;" },
 
     // Counter section
     div(
@@ -72,13 +72,3 @@ export const Counter = () => {
     )
   );
 };
-
-const NamedComponent = () => {
-	return (
-		div(
-			'Named comonent apa'
-		)
-	)
-}
-
-export default NamedComponent
