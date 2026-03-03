@@ -15,6 +15,9 @@ export interface VanJSHMROptions {
 interface ComponentInfo {
   name: string;
   isDefault: boolean;
+    declarationStart: number;
+    nameStart: number;
+    nameEnd: number;
 }
 
 interface TransformContext {
@@ -146,7 +149,14 @@ function detectComponents(code: string): ComponentInfo[] {
     const body = extractFunctionBody(match.index + match[0].length);
     if (usesVanTags(body)) {
       const isDefault = name === defaultExportName;
-      components.push({ name, isDefault });
+      const nameStart = match.index + match[0].indexOf(match[1]);
+      components.push({
+              name,
+              isDefault,
+              declarationStart: match.index,
+              nameStart,
+              nameEnd: nameStart + name.length,
+            });
     }
   }
 
@@ -161,8 +171,15 @@ function detectComponents(code: string): ComponentInfo[] {
         const name = match[1];
         const body = extractFunctionBody(match.index + match[0].length);
         if (usesVanTags(body)) {
-          components.push({ name, isDefault: true });
-        }
+                  const nameStart = match.index + match[0].indexOf(match[1]);
+                  components.push({
+                    name,
+                    isDefault: true,
+                    declarationStart: match.index,
+                    nameStart,
+                    nameEnd: nameStart + name.length,
+                  });
+                }
       }
     }
   }
@@ -273,22 +290,45 @@ function generateEntryHotAccept(
 
 /**
  * Transform submodule files (non-entry components)
- * - Exports *Section factories for each component
+ * - Exports $$__hmr__ factories for each component
  * - Generates hot.accept() for component rerendering
  */
-function generateSubmoduleExports(
-  relPath: string,
-  components: ComponentInfo[]
-): string {
-  let code = "\n";
+ function transformSubmoduleComponents(
+   ctx: TransformContext,
+   components: ComponentInfo[]
+ ): void {
+   const { code, s, relPath } = ctx;
 
-  for (const { name } of components) {
-    const slotId = `${relPath}:${name}`;
-    code += `export const ${name}Section = (props) => __VAN_HMR__.registerRender('${slotId}', ${name}, props);\n`;
-  }
+   for (const { name, isDefault, declarationStart, nameStart, nameEnd } of components) {
+     const slotId = `${relPath}:${name}`;
+     const hmrName = `$$__hmr__${name}`;
 
-  return code;
-}
+     // Rename the original component declaration in-place
+     s.overwrite(nameStart, nameEnd, hmrName);
+
+     if (isDefault) {
+       // Ensure the renamed declaration is exported (Pattern 2 has no export keyword)
+       const isAlreadyExported = code.slice(declarationStart, declarationStart + 6) === 'export';
+       if (!isAlreadyExported) {
+         s.prependLeft(declarationStart, 'export ');
+       }
+
+       // Insert wrapper const right before `export default Name`
+       const exportDefaultMatch = new RegExp(`export\\s+default\\s+${name}\\s*;?`).exec(code);
+       if (exportDefaultMatch) {
+         s.prependLeft(
+           exportDefaultMatch.index,
+           `const ${name} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
+         );
+       }
+     } else {
+       // Named export: append new wrapper as a named export
+       s.append(
+         `\nexport const ${name} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
+       );
+     }
+   }
+ }
 
 /** Generate hot.accept() block for submodules */
 function generateSubmoduleHotAccept(
@@ -299,11 +339,10 @@ function generateSubmoduleHotAccept(
   code += `  import.meta.hot.accept((newModule) => {\n`;
   code += `    if (newModule) {\n`;
 
-  for (const { name, isDefault } of components) {
-    const slotId = `${relPath}:${name}`;
-    const moduleRef = isDefault ? "newModule.default" : `newModule.${name}`;
-    code += `      __VAN_HMR__.rerender('${slotId}', ${moduleRef});\n`;
-  }
+  for (const { name } of components) {
+      const slotId = `${relPath}:${name}`;
+      code += `      __VAN_HMR__.rerender('${slotId}', newModule.$$__hmr__${name});\n`;
+    }
 
   code += `    }\n`;
   code += `  });\n`;
@@ -371,9 +410,9 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
           const { componentProps } = transformEntryFile(ctx, components);
           s.append(generateEntryHotAccept(relPath, components, componentProps));
         } else {
-          // Submodule: export Section factories, generate submodule hot.accept
-          s.append(generateSubmoduleExports(relPath, components));
-          s.append(generateSubmoduleHotAccept(relPath, components));
+        // Submodule: transform components in-place, generate submodule hot.accept
+        transformSubmoduleComponents(ctx, components);
+        s.append(generateSubmoduleHotAccept(relPath, components));
         }
       }
 
