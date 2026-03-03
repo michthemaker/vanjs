@@ -1,5 +1,5 @@
 import van from "@michthemaker/vanjs";
-import { Counter, NamedComponent }  from './counter'
+import NamedComponent, { Counter }  from './counter'
 
 const { div, h1, button } = van.tags;
 
@@ -36,4 +36,4 @@ const App = (props: { name: string }) => {
 
 van.add(document.body, App({ name: "Mice" }));
 
-export default App
+export { App }

@@ -73,7 +73,7 @@ export const Counter = () => {
   );
 };
 
-export const NamedComponent = () => {
+const NamedComponent = () => {
 	return (
 		div(
 			'Named comonent apa'

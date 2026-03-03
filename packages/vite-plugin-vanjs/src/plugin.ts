@@ -290,7 +290,7 @@ function generateEntryHotAccept(
 
 /**
  * Transform submodule files (non-entry components)
- * - Exports $$__hmr__ factories for each component
+ * - Exports ${ComponentName} factories for each component to register render $$\_\_hmr__ComponentName
  * - Generates hot.accept() for component rerendering
  */
  function transformSubmoduleComponents(
