@@ -1,5 +1,5 @@
 import van from "@michthemaker/vanjs";
-import { Counter } from './counter'
+import Counter  from './counter'
 
 const { div, h1, button } = van.tags;
 
