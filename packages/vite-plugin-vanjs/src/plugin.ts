@@ -15,9 +15,9 @@ export interface VanJSHMROptions {
 interface ComponentInfo {
   name: string;
   isDefault: boolean;
-    declarationStart: number;
-    nameStart: number;
-    nameEnd: number;
+  declarationStart: number;
+  nameStart: number;
+  nameEnd: number;
 }
 
 interface TransformContext {
@@ -143,7 +143,7 @@ function detectComponents(code: string): ComponentInfo[] {
 
   // Pattern 1: export const Name = (...) => ...
   const exportConstPattern =
-      /export\s+const\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(?:async\s+)?(?:<[^>]*>\s*)?(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\s*:\s*[^{=>][^=>]*?)?\s*=>/g;
+    /export\s+const\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(?:async\s+)?(?:<[^>]*>\s*)?(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\s*:\s*[^{=>][^=>]*?)?\s*=>/g;
   while ((match = exportConstPattern.exec(code)) !== null) {
     const name = match[1];
     const body = extractFunctionBody(match.index + match[0].length);
@@ -151,35 +151,35 @@ function detectComponents(code: string): ComponentInfo[] {
       const isDefault = name === defaultExportName;
       const nameStart = match.index + match[0].indexOf(match[1]);
       components.push({
-              name,
-              isDefault,
-              declarationStart: match.index,
-              nameStart,
-              nameEnd: nameStart + name.length,
-            });
+        name,
+        isDefault,
+        declarationStart: match.index,
+        nameStart,
+        nameEnd: nameStart + name.length,
+      });
     }
   }
 
   // Pattern 2: const Name = (...) => ... (for default exports only)
   if (defaultExportName) {
     if (!components.some((c) => c.name === defaultExportName)) {
-    const constPattern = new RegExp(
-            `const\\s+(${defaultExportName})\\s*=\\s*(?:async\\s+)?(?:<[^>]*>\\s*)?(\\([^)]*\\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\\s*:\\s*[^{=>][^=>]*?)?\\s*=>`,
-            "g"
-          );
+      const constPattern = new RegExp(
+        `const\\s+(${defaultExportName})\\s*=\\s*(?:async\\s+)?(?:<[^>]*>\\s*)?(\\([^)]*\\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\\s*:\\s*[^{=>][^=>]*?)?\\s*=>`,
+        "g"
+      );
       while ((match = constPattern.exec(code)) !== null) {
         const name = match[1];
         const body = extractFunctionBody(match.index + match[0].length);
         if (usesVanTags(body)) {
-                  const nameStart = match.index + match[0].indexOf(match[1]);
-                  components.push({
-                    name,
-                    isDefault: true,
-                    declarationStart: match.index,
-                    nameStart,
-                    nameEnd: nameStart + name.length,
-                  });
-                }
+          const nameStart = match.index + match[0].indexOf(match[1]);
+          components.push({
+            name,
+            isDefault: true,
+            declarationStart: match.index,
+            nameStart,
+            nameEnd: nameStart + name.length,
+          });
+        }
       }
     }
   }
@@ -293,42 +293,51 @@ function generateEntryHotAccept(
  * - Exports ${ComponentName} factories for each component to register render $$\_\_hmr__ComponentName
  * - Generates hot.accept() for component rerendering
  */
- function transformSubmoduleComponents(
-   ctx: TransformContext,
-   components: ComponentInfo[]
- ): void {
-   const { code, s, relPath } = ctx;
+function transformSubmoduleComponents(
+  ctx: TransformContext,
+  components: ComponentInfo[]
+): void {
+  const { code, s, relPath } = ctx;
 
-   for (const { name, isDefault, declarationStart, nameStart, nameEnd } of components) {
-     const slotId = `${relPath}:${name}`;
-     const hmrName = `$$__hmr__${name}`;
+  for (const {
+    name,
+    isDefault,
+    declarationStart,
+    nameStart,
+    nameEnd,
+  } of components) {
+    const slotId = `${relPath}:${name}`;
+    const hmrName = `$$__hmr__${name}`;
 
-     // Rename the original component declaration in-place
-     s.overwrite(nameStart, nameEnd, hmrName);
+    // Rename the original component declaration in-place
+    s.overwrite(nameStart, nameEnd, hmrName);
 
-     if (isDefault) {
-       // Ensure the renamed declaration is exported (Pattern 2 has no export keyword)
-       const isAlreadyExported = code.slice(declarationStart, declarationStart + 6) === 'export';
-       if (!isAlreadyExported) {
-         s.prependLeft(declarationStart, 'export ');
-       }
+    if (isDefault) {
+      // Ensure the renamed declaration is exported (Pattern 2 has no export keyword)
+      const isAlreadyExported =
+        code.slice(declarationStart, declarationStart + 6) === "export";
+      if (!isAlreadyExported) {
+        s.prependLeft(declarationStart, "export ");
+      }
 
-       // Insert wrapper const right before `export default Name`
-       const exportDefaultMatch = new RegExp(`export\\s+default\\s+${name}\\s*;?`).exec(code);
-       if (exportDefaultMatch) {
-         s.prependLeft(
-           exportDefaultMatch.index,
-           `const ${name} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
-         );
-       }
-     } else {
-       // Named export: append new wrapper as a named export
-       s.append(
-         `\nexport const ${name} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
-       );
-     }
-   }
- }
+      // Insert wrapper const right before `export default Name`
+      const exportDefaultMatch = new RegExp(
+        `export\\s+default\\s+${name}\\s*;?`
+      ).exec(code);
+      if (exportDefaultMatch) {
+        s.prependLeft(
+          exportDefaultMatch.index,
+          `const ${name} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
+        );
+      }
+    } else {
+      // Named export: append new wrapper as a named export
+      s.append(
+        `\nexport const ${name} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
+      );
+    }
+  }
+}
 
 /** Generate hot.accept() block for submodules */
 function generateSubmoduleHotAccept(
@@ -340,9 +349,9 @@ function generateSubmoduleHotAccept(
   code += `    if (newModule) {\n`;
 
   for (const { name } of components) {
-      const slotId = `${relPath}:${name}`;
-      code += `      __VAN_HMR__.rerender('${slotId}', newModule.$$__hmr__${name});\n`;
-    }
+    const slotId = `${relPath}:${name}`;
+    code += `      __VAN_HMR__.rerender('${slotId}', newModule.$$__hmr__${name});\n`;
+  }
 
   code += `    }\n`;
   code += `  });\n`;
@@ -410,9 +419,9 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
           const { componentProps } = transformEntryFile(ctx, components);
           s.append(generateEntryHotAccept(relPath, components, componentProps));
         } else {
-        // Submodule: transform components in-place, generate submodule hot.accept
-        transformSubmoduleComponents(ctx, components);
-        s.append(generateSubmoduleHotAccept(relPath, components));
+          // Submodule: transform components in-place, generate submodule hot.accept
+          transformSubmoduleComponents(ctx, components);
+          s.append(generateSubmoduleHotAccept(relPath, components));
         }
       }
 

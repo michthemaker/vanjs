@@ -1,5 +1,5 @@
 import van from "@michthemaker/vanjs";
-import { Counter } from './barrel-export'
+import { Counter } from "./barrel-export";
 
 const { div, h1, button } = van.tags;
 
@@ -32,7 +32,6 @@ const App = (props: { name: string }) => {
   );
 };
 
-
 van.add(document.body, App({ name: "Mice" }));
 
-export { App }
+export { App };
