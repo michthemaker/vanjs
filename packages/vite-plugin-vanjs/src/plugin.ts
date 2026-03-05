@@ -484,9 +484,6 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
         }
       }
 
-      // Debug: write generated code to file
-      writeFileSync("./gen.ts", s.toString());
-
       return {
         code: s.toString(),
         map: s.generateMap({ hires: true }),
