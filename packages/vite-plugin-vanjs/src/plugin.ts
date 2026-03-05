@@ -1,7 +1,7 @@
 import MagicString from "magic-string";
 import { type Plugin } from "vite";
 import { posix } from "node:path";
-import { writeFileSync } from "node:fs";
+
 
 export interface VanJSHMROptions {
   include?: RegExp;
