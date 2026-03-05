@@ -2,7 +2,6 @@ import MagicString from "magic-string";
 import { type Plugin } from "vite";
 import { posix } from "node:path";
 
-
 export interface VanJSHMROptions {
   include?: RegExp;
   exclude?: RegExp;
@@ -189,56 +188,60 @@ function detectComponents(code: string): ComponentInfo[] {
   }
 
   // Pattern 3: export { Name } or export { Name as OtherName } (no `from`)
-    const exportBracePattern = /export\s+\{([^}]+)\}(?!\s*from)/g;
-    while ((match = exportBracePattern.exec(code)) !== null) {
-      const exportStatementRange = {
-        start: match.index,
-        end: match.index + match[0].length,
-      };
+  const exportBracePattern = /export\s+\{([^}]+)\}(?!\s*from)/g;
+  while ((match = exportBracePattern.exec(code)) !== null) {
+    const exportStatementRange = {
+      start: match.index,
+      end: match.index + match[0].length,
+    };
 
-      const pairs = match[1]
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+    const pairs = match[1]
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-      for (const pair of pairs) {
-        const asParts = pair.split(/\s+as\s+/);
-        const internalName = asParts[0].trim();
-        const exportedName = asParts.length > 1 ? asParts[1].trim() : internalName;
+    for (const pair of pairs) {
+      const asParts = pair.split(/\s+as\s+/);
+      const internalName = asParts[0].trim();
+      const exportedName =
+        asParts.length > 1 ? asParts[1].trim() : internalName;
 
-        // Skip non-components (lowercase first letter)
-        if (!/^[A-Z]/.test(internalName)) continue;
+      // Skip non-components (lowercase first letter)
+      if (!/^[A-Z]/.test(internalName)) continue;
 
-        // Skip already detected by Pattern 1 or 2
-        if (components.some((c) => c.name === internalName)) continue;
+      // Skip already detected by Pattern 1 or 2
+      if (components.some((c) => c.name === internalName)) continue;
 
-        // Locate the plain const declaration
-        const constDeclPattern = new RegExp(
-          `const\\s+(${internalName})\\s*=\\s*(?:async\\s+)?(?:<[^>]*>\\s*)?(\\([^)]*\\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\\s*:\\s*[^{=>][^=>]*?)?\\s*=>`,
-          "g"
+      // Locate the plain const declaration
+      const constDeclPattern = new RegExp(
+        `const\\s+(${internalName})\\s*=\\s*(?:async\\s+)?(?:<[^>]*>\\s*)?(\\([^)]*\\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\\s*:\\s*[^{=>][^=>]*?)?\\s*=>`,
+        "g"
+      );
+
+      let constMatch;
+      while ((constMatch = constDeclPattern.exec(code)) !== null) {
+        const name = constMatch[1];
+        const body = extractFunctionBody(
+          constMatch.index + constMatch[0].length
         );
-
-        let constMatch;
-        while ((constMatch = constDeclPattern.exec(code)) !== null) {
-          const name = constMatch[1];
-          const body = extractFunctionBody(constMatch.index + constMatch[0].length);
-          if (usesVanTags(body)) {
-            const declarationStart = constMatch.index;
-            const nameStart = constMatch.index + constMatch[0].indexOf(constMatch[1]);
-            const nameEnd = nameStart + name.length;
-            components.push({
-              name,
-              exportedName,
-              isDefault: false,
-              declarationStart,
-              nameStart,
-              nameEnd,
-              exportStatementRange,
-            });
-          }
+        if (usesVanTags(body)) {
+          const declarationStart = constMatch.index;
+          const nameStart =
+            constMatch.index + constMatch[0].indexOf(constMatch[1]);
+          const nameEnd = nameStart + name.length;
+          components.push({
+            name,
+            exportedName,
+            isDefault: false,
+            declarationStart,
+            nameStart,
+            nameEnd,
+            exportStatementRange,
+          });
         }
       }
     }
+  }
 
   return components;
 }
@@ -349,54 +352,64 @@ function generateEntryHotAccept(
  * - Exports ${ComponentName} factories for each component to register render $$\_\_hmr__ComponentName
  * - Generates hot.accept() for component rerendering
  */
- function transformSubmoduleComponents(
-   ctx: TransformContext,
-   components: ComponentInfo[]
- ): void {
-   const { code, s, relPath } = ctx;
-   const removedExportRanges = new Set<string>();
+function transformSubmoduleComponents(
+  ctx: TransformContext,
+  components: ComponentInfo[]
+): void {
+  const { code, s, relPath } = ctx;
+  const removedExportRanges = new Set<string>();
 
-   for (const { name, exportedName, isDefault, declarationStart, nameStart, nameEnd, exportStatementRange } of components) {
-     const slotId = `${relPath}:${name}`;
-     const hmrName = `$$__hmr__${name}`;
+  for (const {
+    name,
+    exportedName,
+    isDefault,
+    declarationStart,
+    nameStart,
+    nameEnd,
+    exportStatementRange,
+  } of components) {
+    const slotId = `${relPath}:${name}`;
+    const hmrName = `$$__hmr__${name}`;
 
-     // Rename the original component declaration in-place
-     s.overwrite(nameStart, nameEnd, hmrName);
+    // Rename the original component declaration in-place
+    s.overwrite(nameStart, nameEnd, hmrName);
 
-
-     if (exportStatementRange) {
-           // Pattern 3: plain const + separate export { } statement
-           const rangeKey = `${exportStatementRange.start}:${exportStatementRange.end}`;
-           if (!removedExportRanges.has(rangeKey)) {
-             s.remove(exportStatementRange.start, exportStatementRange.end);
-             removedExportRanges.add(rangeKey);
-           }
-           // Ensure $$__hmr__Name is exported so newModule.$$__hmr__Name works in HMR accept
-           s.prependLeft(declarationStart, 'export ');
-           s.append(
-             `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
-           );
-     } else if (isDefault) {
-       // Pattern 2: plain const + export default
-       const isAlreadyExported = code.slice(declarationStart, declarationStart + 6) === 'export';
-       if (!isAlreadyExported) {
-         s.prependLeft(declarationStart, 'export ');
-       }
-       const exportDefaultMatch = new RegExp(`export\\s+default\\s+${name}\\s*;?`).exec(code);
-       if (exportDefaultMatch) {
-         s.prependLeft(
-           exportDefaultMatch.index,
-           `const ${name} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
-         );
-       }
-     } else {
-       // Pattern 1: export const — append wrapper using exportedName
-       s.append(
-         `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
-       );
-     }
-   }
- }
+    if (exportStatementRange) {
+      // Pattern 3: plain const + separate export { } statement
+      const rangeKey = `${exportStatementRange.start}:${exportStatementRange.end}`;
+      if (!removedExportRanges.has(rangeKey)) {
+        s.remove(exportStatementRange.start, exportStatementRange.end);
+        removedExportRanges.add(rangeKey);
+      }
+      // Ensure $$__hmr__Name is exported so newModule.$$__hmr__Name works in HMR accept
+      s.prependLeft(declarationStart, "export ");
+      s.append(
+        `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
+      );
+    } else if (isDefault) {
+      // Pattern 2: plain const + export default
+      const isAlreadyExported =
+        code.slice(declarationStart, declarationStart + 6) === "export";
+      if (!isAlreadyExported) {
+        s.prependLeft(declarationStart, "export ");
+      }
+      const exportDefaultMatch = new RegExp(
+        `export\\s+default\\s+${name}\\s*;?`
+      ).exec(code);
+      if (exportDefaultMatch) {
+        s.prependLeft(
+          exportDefaultMatch.index,
+          `const ${name} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
+        );
+      }
+    } else {
+      // Pattern 1: export const — append wrapper using exportedName
+      s.append(
+        `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
+      );
+    }
+  }
+}
 
 /** Generate hot.accept() block for submodules */
 function generateSubmoduleHotAccept(
@@ -435,7 +448,7 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
   return {
     name: "vite-plugin-vanjs-hmr",
     enforce: "pre",
-    apply: 'serve',
+    apply: "serve",
     configResolved(config) {
       projectRoot = config.root;
     },

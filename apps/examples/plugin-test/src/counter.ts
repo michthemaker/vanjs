@@ -74,11 +74,7 @@ const Counter = (): any => {
 };
 
 export const OtherName = (): any => {
-  return (
-  div('name')
-  )
+  return div("name");
 };
 
-export {
-	Counter
-}
+export { Counter };
