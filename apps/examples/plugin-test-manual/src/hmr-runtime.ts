@@ -1,0 +1,399 @@
+import van from "@michthemaker/vanjs";
+
+// ============================================
+// HMR Runtime (What the plugin would inject as a virtual module)
+// ============================================
+class VanJSHMRRuntime {
+  stateRegistry = new Map<string, any>();
+  derivedRegistry = new Map<string, any>();
+  // Stores comment marker pairs keyed by render slot ID - persists across module reloads
+  renderSlots = new Map<
+    string,
+    {
+      startMarker: Comment;
+      endMarker: Comment;
+      props?: any;
+      freshlyDisconnected?: boolean;
+    }
+  >();
+  currentStateContext: string | null = null;
+  currentDerivedContext: string | null = null;
+  currentInstanceId: string | null = null;
+  originalVanState: any = null;
+  originalVanDerive: any = null;
+  initialized = false;
+  gcIntervalId: any = null;
+  reusedThisCycle = new Set<string>();
+  private errorOverlay: HTMLElement | null = null;
+  /** 'quiet' = errors/warnings only, 'summary' = one-line per HMR update, 'verbose' = full detail */
+  logLevel: "quiet" | "summary" | "verbose" = "summary";
+
+  private log(level: "summary" | "verbose", ...args: any[]) {
+    if (this.logLevel === "quiet") return;
+    if (level === "verbose" && this.logLevel !== "verbose") return;
+    console.log(...args);
+  }
+
+  init() {
+    if (this.initialized) return;
+    this.initialized = true;
+
+    // Wrap van.state to preserve states across reloads
+    this.originalVanState = van.state;
+    (van as any).state = (initial?: any) => {
+      const hmrId = this.currentStateContext;
+
+      if (hmrId && this.stateRegistry.has(hmrId)) {
+        return this.stateRegistry.get(hmrId);
+      }
+
+      const state = this.originalVanState(initial);
+
+      if (hmrId) {
+        this.stateRegistry.set(hmrId, state);
+      }
+
+      return state;
+    };
+
+    // Wrap van.derive to preserve derived states across reloads
+    this.originalVanDerive = van.derive;
+    (van as any).derive = (fn: () => any) => {
+      const hmrId = this.currentDerivedContext;
+
+      if (hmrId && this.derivedRegistry.has(hmrId)) {
+        // Return existing derived state - don't recreate to avoid double listeners
+        // The derivation function is already set up from initial creation
+        return this.derivedRegistry.get(hmrId);
+      }
+
+      const derived = this.originalVanDerive(fn);
+
+      if (hmrId) {
+        this.derivedRegistry.set(hmrId, derived);
+      }
+
+      return derived;
+    };
+
+    // Schedule periodic GC to clean up disconnected components (every 30 seconds)
+    if (!this.gcIntervalId) {
+      this.gcIntervalId = setInterval(() => this.cleanup(), 30000);
+    }
+  }
+
+  // Scope state by instance if within a component context
+  createState<T>(id: string, initialValue: T) {
+    const scopedId = this.currentInstanceId
+      ? `${this.currentInstanceId}:${id}`
+      : id;
+    this.currentStateContext = scopedId;
+    const state = (van as any).state(initialValue);
+    this.currentStateContext = null;
+    return state as { val: T; readonly oldVal: T };
+  }
+
+  // Scope derived state by instance if within a component context
+  createDerived<T>(id: string, fn: () => T) {
+    const scopedId = this.currentInstanceId
+      ? `${this.currentInstanceId}:${id}`
+      : id;
+    this.currentDerivedContext = scopedId;
+    const derived = (van as any).derive(fn);
+    this.currentDerivedContext = null;
+    return derived as { val: T; readonly oldVal: T };
+  }
+
+  // Create render slot with comment markers. Assigns instance index for multi-instance support.
+  registerRender(
+    id: string,
+    fn: (props?: any) => Node,
+    props?: any
+  ): [Comment, Node, Comment] {
+    const baseId = id;
+
+    // Find next available instance index
+    // Reuse disconnected slots that were previously rendered (orphaned by parent re-render)
+    // Skip disconnected slots that haven't rendered yet (initial mount, not connected)
+    let index = 0;
+    while (this.renderSlots.has(`${baseId}:${index}`)) {
+      const slot = this.renderSlots.get(`${baseId}:${index}`);
+      const slotId = `${baseId}:${index}`;
+      if (
+        slot &&
+        !slot.startMarker.isConnected &&
+        slot.freshlyDisconnected &&
+        !this.reusedThisCycle.has(slotId)
+      ) {
+        // Reuse this freshly orphaned slot (only once per render cycle)
+        this.reusedThisCycle.add(slotId);
+        break;
+      }
+      index++;
+    }
+    id = `${baseId}:${index}`;
+
+    // Set instance context for state scoping
+    const prevInstanceId = this.currentInstanceId;
+    this.currentInstanceId = id;
+
+    const existingSlot = this.renderSlots.get(id);
+    if (existingSlot) {
+      if (!existingSlot.startMarker.isConnected) {
+        this.clearBetweenMarkers(existingSlot);
+        existingSlot.props = props; // update stored props
+        const element = fn(props);
+        this.currentInstanceId = prevInstanceId;
+        return [existingSlot.startMarker, element, existingSlot.endMarker];
+      }
+      // Markers connected, hot.accept handles re-render
+      this.currentInstanceId = prevInstanceId;
+      return [
+        existingSlot.startMarker,
+        existingSlot.startMarker,
+        existingSlot.endMarker,
+      ];
+    }
+
+    const startMarker = new Comment(`hmr:${id}:start`);
+    const endMarker = new Comment(`hmr:${id}:end`);
+    this.renderSlots.set(id, { startMarker, endMarker, props });
+
+    const element = fn(props);
+    this.currentInstanceId = prevInstanceId;
+    return [startMarker, element, endMarker];
+  }
+
+  // Helper to clear all nodes between markers (even if detached)
+  private clearBetweenMarkers(slot: {
+    startMarker: Comment;
+    endMarker: Comment;
+  }) {
+    let cur = slot.startMarker.nextSibling;
+    while (cur && cur !== slot.endMarker) {
+      const next = cur.nextSibling;
+      cur.remove();
+      cur = next;
+    }
+  }
+
+  // Show error overlay when HMR component render fails
+  private showErrorOverlay(slotId: string, error: unknown) {
+    this.dismissErrorOverlay();
+
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? (error.stack ?? "") : "";
+
+    const overlay = document.createElement("div");
+    overlay.id = "__vanjs-hmr-error-overlay";
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); color: #fff; z-index: 99999;
+      font-family: monospace; padding: 40px; box-sizing: border-box;
+      overflow: auto; display: flex; flex-direction: column;
+    `;
+
+    overlay.innerHTML = `
+      <div style="max-width: 900px; margin: 0 auto; width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2 style="margin: 0; color: #ff5555; font-size: 20px;">🔥 HMR Error in <code>${slotId}</code></h2>
+          <button id="__vanjs-hmr-dismiss" style="
+            background: none; border: 1px solid #666; color: #ccc; padding: 6px 16px;
+            cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 14px;
+          ">Dismiss (Esc)</button>
+        </div>
+        <p style="color: #ccc; margin: 0 0 8px 0; font-size: 13px;">Old DOM preserved. Fix the error and save to retry.</p>
+        <pre style="
+          background: #1a1a2e; color: #ff6b6b; padding: 20px; border-radius: 8px;
+          overflow: auto; font-size: 14px; line-height: 1.6; white-space: pre-wrap;
+          border: 1px solid #333; margin: 0;
+        ">${this.escapeHtml(message)}
+
+${this.escapeHtml(stack)}</pre>
+      </div>
+    `;
+
+    const dismiss = () => this.dismissErrorOverlay();
+    overlay
+      .querySelector("#__vanjs-hmr-dismiss")
+      ?.addEventListener("click", dismiss);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        dismiss();
+        document.removeEventListener("keydown", onKey);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+
+    document.body.appendChild(overlay);
+    this.errorOverlay = overlay;
+  }
+
+  private dismissErrorOverlay() {
+    if (this.errorOverlay) {
+      this.errorOverlay.remove();
+      this.errorOverlay = null;
+    }
+  }
+
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  // Re-render component(s) with new code. Finds all instances by ID prefix.
+  rerender(id: string, fn: (props?: any) => Node, props?: any) {
+    // Find all matching instances
+    const matchingSlots: Array<
+      [
+        string,
+        {
+          startMarker: Comment;
+          endMarker: Comment;
+          props?: any;
+          freshlyDisconnected?: boolean;
+        },
+      ]
+    > = [];
+
+    for (const [slotId, slot] of this.renderSlots.entries()) {
+      // Match exact ID or instance-prefixed ID (e.g., "counter.ts:CounterSection:0")
+      if (slotId === id || slotId.startsWith(`${id}:`)) {
+        matchingSlots.push([slotId, slot]);
+      }
+    }
+
+    if (matchingSlots.length === 0) {
+      console.warn(`[VanJS HMR] rerender: no slot found for "${id}"`);
+      return;
+    }
+
+    this.log(
+      "summary",
+      `[VanJS HMR] ♻️  ${id} (${matchingSlots.length} instance${matchingSlots.length > 1 ? "s" : ""})`
+    );
+
+    // Rerender all matching instances
+    for (const [slotId, slot] of matchingSlots) {
+      const { startMarker, endMarker } = slot;
+      const parent = startMarker.parentNode;
+      if (!parent) {
+        console.warn(
+          `[VanJS HMR] rerender: markers for "${slotId}" are not in the DOM`
+        );
+        continue;
+      }
+      this.log("verbose", `[VanJS HMR]   → rendering ${slotId}`);
+
+      // Save old content before clearing so we can restore on error
+      const savedNodes: Node[] = [];
+      let cur = startMarker.nextSibling;
+      while (cur && cur !== endMarker) {
+        savedNodes.push(cur);
+        cur = cur.nextSibling;
+      }
+
+      this.clearBetweenMarkers(slot);
+
+      // Mark all NOW-disconnected slots as freshly disconnected (after clear, before fn call)
+      for (const [_, childSlot] of this.renderSlots.entries()) {
+        if (!childSlot.startMarker.isConnected) {
+          childSlot.freshlyDisconnected = true;
+        }
+      }
+
+      // Set instance context for state restoration
+      const prevInstanceId = this.currentInstanceId;
+      this.currentInstanceId = slotId;
+
+      // Update props if provided, render with restored state
+      if (props !== undefined) {
+        slot.props = props;
+      }
+
+      try {
+        const newElement = fn(slot.props);
+        this.currentInstanceId = prevInstanceId;
+        parent.insertBefore(newElement, endMarker);
+        // Successful render — dismiss any existing error overlay
+        this.dismissErrorOverlay();
+      } catch (error) {
+        this.currentInstanceId = prevInstanceId;
+        // Restore old DOM content
+        for (const node of savedNodes) {
+          parent.insertBefore(node, endMarker);
+        }
+        console.error(`[VanJS HMR] Error rendering "${slotId}":`, error);
+        this.showErrorOverlay(slotId, error);
+      }
+    }
+
+    // Clear freshlyDisconnected flags after render cycle completes
+    // This allows multiple components to reuse slots during the same cycle
+    queueMicrotask(() => {
+      for (const [_, slot] of this.renderSlots.entries()) {
+        if (slot.freshlyDisconnected) {
+          slot.freshlyDisconnected = false;
+        }
+      }
+      this.reusedThisCycle.clear();
+    });
+  }
+
+  // GC disconnected components (runs every 30s)
+  cleanup() {
+    const disconnectedSlots: string[] = [];
+
+    for (const [slotId, slot] of this.renderSlots.entries()) {
+      if (!slot.startMarker.isConnected) {
+        disconnectedSlots.push(slotId);
+      }
+    }
+
+    if (disconnectedSlots.length === 0) return;
+
+    this.log(
+      "summary",
+      `[VanJS HMR] 🧹 GC: ${disconnectedSlots.length} disconnected component(s)`
+    );
+
+    for (const slotId of disconnectedSlots) {
+      this.renderSlots.delete(slotId);
+
+      const statesToDelete: string[] = [];
+      for (const key of this.stateRegistry.keys()) {
+        if (key === slotId || key.startsWith(`${slotId}:`)) {
+          statesToDelete.push(key);
+        }
+      }
+      for (const key of statesToDelete) {
+        this.stateRegistry.delete(key);
+      }
+
+      const derivedToDelete: string[] = [];
+      for (const key of this.derivedRegistry.keys()) {
+        if (key === slotId || key.startsWith(`${slotId}:`)) {
+          derivedToDelete.push(key);
+        }
+      }
+      for (const key of derivedToDelete) {
+        this.derivedRegistry.delete(key);
+      }
+    }
+  }
+}
+
+// Persist runtime on window so it survives Vite module re-execution
+const __VAN_HMR__: VanJSHMRRuntime =
+  (window as any).__VAN_HMR__ ?? new VanJSHMRRuntime();
+
+if (!(window as any).__VAN_HMR__) {
+  (window as any).__VAN_HMR__ = __VAN_HMR__;
+}
+
+__VAN_HMR__.init();
+
+export { __VAN_HMR__ };
+export type { VanJSHMRRuntime };

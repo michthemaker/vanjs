@@ -1,0 +1,14 @@
+{
+  // oxc should host their config schemas themselves. 😭
+  "$schema": "file:///C:/Users/User/AppData/Roaming/Zed/config_schemas/oxfmt.json",
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "quoteProps": "as-needed",
+  "trailingComma": "es5",
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf"
+}

@@ -3,10 +3,10 @@ import { resolve } from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
-	resolve: {
-		alias: {
-			"@src": resolve("./src/"),
-		},
-	},
-	plugins: [],
+  resolve: {
+    alias: {
+      "@src": resolve("./src/"),
+    },
+  },
+  plugins: [],
 });

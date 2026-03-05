@@ -14,10 +14,10 @@ import type { StateView } from "./van.ts";
  */
 
 type ExtractEventType<T> = [T] extends [
-	((e: infer E extends Event) => any) | null,
+  ((e: infer E extends Event) => any) | null,
 ]
-	? E
-	: Event;
+  ? E
+  : Event;
 
 /**
  * An event handler that can be:
@@ -26,9 +26,9 @@ type ExtractEventType<T> = [T] extends [
  * - A derive function that returns a function
  */
 export type ReactiveEventHandler<E extends Event, Target extends Element> =
-	| ((e: E & { currentTarget: Target }) => void)
-	| StateView<((e: E) => void) | null>
-	| (() => ((e: E) => void) | null);
+  | ((e: E & { currentTarget: Target }) => void)
+  | StateView<((e: E) => void) | null>
+  | (() => ((e: E) => void) | null);
 
 /**
  * Extracts all `on*` event handler properties from an element type
@@ -38,10 +38,10 @@ export type ReactiveEventHandler<E extends Event, Target extends Element> =
  * - Support for reactive handlers (State and derive functions)
  */
 export type ElementEventHandlers<E extends Element> = {
-	[K in keyof E as K extends `on${string}`
-		? // this means can we assign an function with event parameter to the event handler property?
-			((ev: Event) => any) | null extends E[K]
-			? K
-			: never
-		: never]?: ReactiveEventHandler<ExtractEventType<E[K]>, E>;
+  [K in keyof E as K extends `on${string}`
+    ? // this means can we assign an function with event parameter to the event handler property?
+      ((ev: Event) => any) | null extends E[K]
+      ? K
+      : never
+    : never]?: ReactiveEventHandler<ExtractEventType<E[K]>, E>;
 };
