@@ -1,7 +1,7 @@
 import van from "@michthemaker/vanjs";
 const { div, h1, p, button, input } = van.tags;
 
-export const Counter = (): any => {
+const Counter = (): any => {
   const counter = van.state(0);
   const textInput = van.state("Edit Me!");
 
@@ -19,7 +19,7 @@ export const Counter = (): any => {
           "margin-bottom: 20px; border: 2px solid #4CAF50; border-radius: 8px; padding: 16px;",
       },
       h1("Counter testing meee waitng for us "),
-      p(() => `Count: ${counter.val} + js`),
+      p(() => `Count: ${counter.val} + name`),
       p(() => `Doubled (inline): ${counter.val * 2}`),
       p(() => `derived 😉 Doubled : ${doubled.val}`),
       p(() => `Tripled (derived): ${tripled.val}`),
@@ -72,3 +72,13 @@ export const Counter = (): any => {
     )
   );
 };
+
+export const OtherName = (): any => {
+  return (
+  div('name')
+  )
+};
+
+export {
+	Counter
+}

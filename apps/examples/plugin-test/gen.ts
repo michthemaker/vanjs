@@ -39,12 +39,12 @@ const App = (props: { name: string }) => {
   }
 }());
 
-export { App };
+export default App;
 
 if (import.meta.hot) {
   import.meta.hot.accept((newModule) => {
     if (newModule) {
-      __VAN_HMR__.rerender('src/main.ts:App', newModule.App, { name: "Mice" });
+      __VAN_HMR__.rerender('src/main.ts:App', newModule.default, { name: "Mice" });
     }
   });
 }

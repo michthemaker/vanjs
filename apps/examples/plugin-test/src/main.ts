@@ -34,4 +34,4 @@ const App = (props: { name: string }) => {
 
 van.add(document.body, App({ name: "Mice" }));
 
-export { App };
+export default App;
