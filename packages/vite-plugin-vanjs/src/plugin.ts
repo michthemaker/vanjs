@@ -423,7 +423,7 @@ function generateSubmoduleHotAccept(
 // Plugin Entry Point
 // ============================================
 
-export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
+export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
   const {
     include = /\.[jt]s?$/,
     exclude = /node_modules/,
@@ -435,7 +435,7 @@ export function hmrPlugin(options: VanJSHMROptions = {}): Plugin {
   return {
     name: "vite-plugin-vanjs-hmr",
     enforce: "pre",
-
+    apply: 'serve',
     configResolved(config) {
       projectRoot = config.root;
     },
