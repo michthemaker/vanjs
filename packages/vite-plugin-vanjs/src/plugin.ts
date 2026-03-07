@@ -7,6 +7,19 @@ export interface VanJSHMROptions {
   exclude?: RegExp;
   /** Match entry files (mount to document.body). Matched against relative path. */
   entryMatch?: RegExp;
+  /**
+   * **Experimental** — Enable smart state shape checking during HMR.
+   *
+   * When enabled, `van.state()` values are preserved across hot reloads only if
+   * the shape of the new initial value is compatible with the currently held value.
+   * If the shape changes (e.g. `number` → `object`, or new/removed object keys),
+   * the state is reset to the new initial value instead of preserving the stale one.
+   *
+   * @experimental This feature is under active development and the shape comparison
+   * heuristics may change in future versions.
+   * @default false
+   */
+  experimental_smartStateChecking?: boolean;
 }
 
 // Shared Types & Utilities
@@ -27,6 +40,8 @@ interface TransformContext {
   relPath: string;
   getLineCol: (offset: number) => string;
 }
+
+function noop(): void {}
 
 function createLineColHelper(code: string): (offset: number) => string {
   const lineStarts = [0];
@@ -64,8 +79,12 @@ function transformVanState(ctx: TransformContext): void {
   }
 }
 
-/** Transform van.derive() → __VAN_HMR__.createDerived() */
+/**
+ * @dev Transform van.derive() → __VAN_HMR__.createDerived()
+ * @dev disabled for now (maybe derives should rerun as they are always pure functions dependent on other state)
+ */
 function transformVanDerive(ctx: TransformContext): void {
+	return noop()
   const { code, s, relPath, getLineCol } = ctx;
   const derivePattern = /van\.derive\s*\(/g;
   let match;
@@ -441,6 +460,7 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
     include = /\.[jt]s?$/,
     exclude = /node_modules/,
     entryMatch = /main\.[jt]s?$/,
+    experimental_smartStateChecking = true,
   } = options;
 
   let projectRoot = "";
@@ -511,7 +531,7 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
 
     load(id) {
       if (id === "\0virtual:vanjs-hmr-runtime") {
-        return HMR_RUNTIME_CODE;
+        return HMR_RUNTIME_CODE(experimental_smartStateChecking);
       }
     },
   };
@@ -522,18 +542,18 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
 // Plain JS (no TypeScript) — Vite serves this directly to the browser.
 // Source of truth: apps/examples/plugin-test/src/hmr-runtime.ts
 // ============================================
-const HMR_RUNTIME_CODE = `
+const HMR_RUNTIME_CODE = (shapeMatching = true) => `
 import van from "@michthemaker/vanjs";
 
 class VanJSHMRRuntime {
   stateRegistry = new Map();
-  derivedRegistry = new Map();
+  // derivedRegistry = new Map();
   renderSlots = new Map();
   currentStateContext = null;
   currentDerivedContext = null;
   currentInstanceId = null;
   originalVanState = null;
-  originalVanDerive = null;
+  // originalVanDerive = null;
   initialized = false;
   gcIntervalId = null;
   reusedThisCycle = new Set();
@@ -554,7 +574,19 @@ class VanJSHMRRuntime {
     van.state = (initial) => {
       const hmrId = this.currentStateContext;
       if (hmrId && this.stateRegistry.has(hmrId)) {
-        return this.stateRegistry.get(hmrId);
+        const preserved = this.stateRegistry.get(hmrId);
+        // check if we have the flag off to disable shaped mapping
+      	if (!${shapeMatching}) return preserved
+        const oldShape = this.deriveShape(preserved.val);
+        const newShape = this.deriveShape(initial);
+        if (this.shapesMatch(oldShape, newShape)) {
+          return preserved;
+        }
+        // Shape changed — reset in place to keep derived subscriptions intact
+        this.log('summary', '[VanJS HMR] 🔄 State shape changed for "' + hmrId + '" — resetting');
+        preserved.val = initial;
+        console.log(preserved)
+        return preserved;
       }
       const state = this.originalVanState(initial);
       if (hmrId) {
@@ -563,18 +595,18 @@ class VanJSHMRRuntime {
       return state;
     };
 
-    this.originalVanDerive = van.derive;
-    van.derive = (fn) => {
-      const hmrId = this.currentDerivedContext;
-      if (hmrId && this.derivedRegistry.has(hmrId)) {
-        return this.derivedRegistry.get(hmrId);
-      }
-      const derived = this.originalVanDerive(fn);
-      if (hmrId) {
-        this.derivedRegistry.set(hmrId, derived);
-      }
-      return derived;
-    };
+    // this.originalVanDerive = van.derive;
+    // van.derive = (fn) => {
+    //   const hmrId = this.currentDerivedContext;
+    //   if (hmrId && this.derivedRegistry.has(hmrId)) {
+    //     return this.derivedRegistry.get(hmrId);
+    //   }
+    //   const derived = this.originalVanDerive(fn);
+    //   if (hmrId) {
+    //     this.derivedRegistry.set(hmrId, derived);
+    //   }
+    //   return derived;
+    // };
 
     if (!this.gcIntervalId) {
       this.gcIntervalId = setInterval(() => this.cleanup(), 30000);
@@ -589,12 +621,79 @@ class VanJSHMRRuntime {
     return state;
   }
 
+  /**
+   * @dev it's like we won't create derived anymore
+   */
   createDerived(id, fn) {
     const scopedId = this.currentInstanceId ? this.currentInstanceId + ':' + id : id;
     this.currentDerivedContext = scopedId;
     const derived = van.derive(fn);
     this.currentDerivedContext = null;
     return derived;
+  }
+
+  // shape matching
+  deriveShape(value, totalKeys = { count: 0 }) {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (Array.isArray(value)) return 'array';
+
+    const t = typeof value;
+    if (t !== 'object') return t;
+
+    // Class instance
+    if (value.constructor && value.constructor !== Object) {
+      return { __type: 'instance', name: value.constructor.name };
+    }
+
+    // Plain object
+    const keys = Object.keys(value);
+    totalKeys.count += keys.length;
+    if (totalKeys.count > 50) return 'complex';
+
+    const shape = { __type: 'object', keys: {} };
+    for (const key of keys) {
+      shape.keys[key] = this.deriveShape(value[key], totalKeys);
+      if (totalKeys.count > 50) {
+        shape.keys[key] = 'complex';
+        break;
+      }
+    }
+    return shape;
+  }
+
+  shapesMatch(a, b) {
+    // Either side complex — always compatible
+    if (a === 'complex' || b === 'complex') return true;
+
+    // Both primitives / null / undefined
+    if (typeof a === 'string' && typeof b === 'string') return a === b;
+
+    // Both arrays
+    if (a === 'array' && b === 'array') return true;
+
+    if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
+      // Both instances
+      if (a.__type === 'instance' && b.__type === 'instance') {
+        return a.name === b.name;
+      }
+
+      // Both plain objects
+      if (a.__type === 'object' && b.__type === 'object') {
+        const aKeys = Object.keys(a.keys);
+        const bKeys = Object.keys(b.keys);
+
+        if (aKeys.length !== bKeys.length) return false;
+        if (!aKeys.every((k) => bKeys.includes(k))) return false;
+
+        for (const key of aKeys) {
+          if (!this.shapesMatch(a.keys[key], b.keys[key])) return false;
+        }
+        return true;
+      }
+    }
+
+    return false;
   }
 
   registerRender(id, fn, props) {

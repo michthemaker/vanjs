@@ -2,15 +2,15 @@ import van from "@michthemaker/vanjs";
 const { div, h1, p, button, input } = van.tags;
 
 const Counter = (): any => {
-  const counter = van.state(0);
+  const counter = van.state({ number: 9 });
   const textInput = van.state("Edit Me!");
 
   // Test van.derive - now preserved across HMR with createDerived
-  const doubled = van.derive(() => counter.val * 2);
-  const tripled = van.derive(() => counter.val * 3);
+  const doubled = van.derive(() => counter.val.number * 2);
+  const tripled = van.derive(() => counter.val.number * 3);
 
   return div(
-    { style: "padding: 80px;" },
+    { style: "padding: 2px;" },
 
     // Counter section
     div(
@@ -18,14 +18,14 @@ const Counter = (): any => {
         style:
           "margin-bottom: 20px; border: 2px solid #4CAF50; border-radius: 8px; padding: 16px;",
       },
-      h1("Counter testing meee waitng for us "),
-      p(() => `Count: ${counter.val} + name`),
-      p(() => `Doubled (inline): ${counter.val * 2}`),
+      h1("Counter testing meee waitng for u "),
+      p(() => `Count: ${counter.val.number} + name`),
+      p(() => `Doubled (inline): ${counter.val.number * 2}`),
       p(() => `derived 😉 Doubled : ${doubled.val}`),
       p(() => `Tripled (derived): ${tripled.val}`),
       button(
         {
-          onclick: () => counter.val++,
+          onclick: () => counter.val.number++,
           style:
             "margin: 5px; padding: 10px 20px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px;",
         },
@@ -33,7 +33,7 @@ const Counter = (): any => {
       ),
       button(
         {
-          onclick: () => counter.val--,
+          onclick: () => counter.val.number--,
           style:
             "margin: 5px; padding: 10px 20px; cursor: pointer; background-color: #FF9800; color: white; border: none; border-radius: 4px;",
         },

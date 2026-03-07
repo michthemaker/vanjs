@@ -10,5 +10,12 @@ export default defineConfig({
       "@src": resolve("./src/"),
     },
   },
-  plugins: [inspect(), vanjs()],
+  plugins: [
+    inspect(),
+    vanjs({
+      hmr: {
+        experimental_smartStateChecking: true,
+      },
+    }),
+  ],
 });
