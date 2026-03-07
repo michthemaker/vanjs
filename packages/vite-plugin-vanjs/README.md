@@ -113,11 +113,11 @@ vanjs({
 
 ## State preservation
 
-`van.state()` and `van.derive()` are preserved across HMR updates automatically — no extra setup needed.
+`van.state()` is preserved across HMR updates automatically — no extra setup needed.
 
 ```ts
 const count = van.state(0); // survives hot reloads
-const doubled = van.derive(() => count.val * 2); // also preserved
+const doubled = van.derive(() => count.val * 2); // not preserved, needs to be re-created on HMR
 ```
 
 ---

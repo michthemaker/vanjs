@@ -14,7 +14,7 @@ export default defineConfig({
     inspect(),
     vanjs({
       hmr: {
-        experimental_smartStateChecking: true,
+        smartStateChecking: true,
       },
     }),
   ],

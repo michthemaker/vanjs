@@ -8,18 +8,16 @@ export interface VanJSHMROptions {
   /** Match entry files (mount to document.body). Matched against relative path. */
   entryMatch?: RegExp;
   /**
-   * **Experimental** — Enable smart state shape checking during HMR.
+   * Enable smart state shape checking during HMR.
    *
    * When enabled, `van.state()` values are preserved across hot reloads only if
    * the shape of the new initial value is compatible with the currently held value.
    * If the shape changes (e.g. `number` → `object`, or new/removed object keys),
    * the state is reset to the new initial value instead of preserving the stale one.
    *
-   * @experimental This feature is under active development and the shape comparison
-   * heuristics may change in future versions.
-   * @default false
+   * @default true
    */
-  experimental_smartStateChecking?: boolean;
+  smartStateChecking?: boolean;
 }
 
 // Shared Types & Utilities
@@ -40,8 +38,6 @@ interface TransformContext {
   relPath: string;
   getLineCol: (offset: number) => string;
 }
-
-function noop(): void {}
 
 function createLineColHelper(code: string): (offset: number) => string {
   const lineStarts = [0];
@@ -83,21 +79,20 @@ function transformVanState(ctx: TransformContext): void {
  * @dev Transform van.derive() → __VAN_HMR__.createDerived()
  * @dev disabled for now (maybe derives should rerun as they are always pure functions dependent on other state)
  */
-function transformVanDerive(ctx: TransformContext): void {
-	return noop()
-  const { code, s, relPath, getLineCol } = ctx;
-  const derivePattern = /van\.derive\s*\(/g;
-  let match;
-  while ((match = derivePattern.exec(code)) !== null) {
-    const start = match.index;
-    const hmrId = `${relPath}:${getLineCol(start)}`;
-    s.overwrite(
-      start,
-      start + match[0].length,
-      `__VAN_HMR__.createDerived('${hmrId}', `
-    );
-  }
-}
+// function transformVanDerive(ctx: TransformContext): void {
+//   const { code, s, relPath, getLineCol } = ctx;
+//   const derivePattern = /van\.derive\s*\(/g;
+//   let match;
+//   while ((match = derivePattern.exec(code)) !== null) {
+//     const start = match.index;
+//     const hmrId = `${relPath}:${getLineCol(start)}`;
+//     s.overwrite(
+//       start,
+//       start + match[0].length,
+//       `__VAN_HMR__.createDerived('${hmrId}', `
+//     );
+//   }
+// }
 
 /** Detect VanJS components in the file */
 function detectComponents(code: string): ComponentInfo[] {
@@ -460,7 +455,7 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
     include = /\.[jt]s?$/,
     exclude = /node_modules/,
     entryMatch = /main\.[jt]s?$/,
-    experimental_smartStateChecking = true,
+    smartStateChecking = true,
   } = options;
 
   let projectRoot = "";
@@ -500,7 +495,7 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
 
       // === Common transformations ===
       transformVanState(ctx);
-      transformVanDerive(ctx);
+      // transformVanDerive(ctx);
       const components = detectComponents(code);
       injectHmrImport(s);
 
@@ -531,7 +526,7 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
 
     load(id) {
       if (id === "\0virtual:vanjs-hmr-runtime") {
-        return HMR_RUNTIME_CODE(experimental_smartStateChecking);
+        return HMR_RUNTIME_CODE(smartStateChecking);
       }
     },
   };
@@ -844,9 +839,10 @@ class VanJSHMRRuntime {
       for (const key of [...this.stateRegistry.keys()]) {
         if (key === slotId || key.startsWith(slotId + ':')) this.stateRegistry.delete(key);
       }
-      for (const key of [...this.derivedRegistry.keys()]) {
-        if (key === slotId || key.startsWith(slotId + ':')) this.derivedRegistry.delete(key);
-      }
+      // we disable derive checking
+      // for (const key of [...this.derivedRegistry.keys()]) {
+      //   if (key === slotId || key.startsWith(slotId + ':')) this.derivedRegistry.delete(key);
+      // }
     }
   }
 }
