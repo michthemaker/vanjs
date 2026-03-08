@@ -1,159 +1,122 @@
-# VanJS
+# VanJS &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![npm version](https://img.shields.io/npm/v/@michthemaker/vanjs.svg?style=flat)](https://www.npmjs.com/package/@michthemaker/vanjs) [![bundle size](https://img.shields.io/bundlephobia/minzip/@michthemaker/vanjs)](https://bundlephobia.com/package/@michthemaker/vanjs) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-A lightweight reactive UI framework that works directly with the real DOM — no virtual DOM, no compiler, no magic. Just JavaScript.
+VanJS is a lightweight reactive UI framework that works directly with the real DOM.
+
+- **No Virtual DOM:** VanJS binds state directly to real DOM nodes. When state changes, only the affected nodes update — no diffing, no reconciliation, no overhead.
+- **No Compiler:** Write plain JavaScript or TypeScript. No JSX, no template syntax, no build-time magic. Your components are just functions that return DOM elements.
+- **Reactive by Default:** `van.state()` and `van.derive()` give you fine-grained reactivity out of the box. Pass state directly to tags or derive computed values — updates propagate automatically.
+- **Tiny by Design:** The entire runtime fits in a few KB. No dependencies, no framework DSL, no abstractions you didn't ask for.
+
+## Documentation
+
+- [Quick Start](#quick-start)
+- [Core Primitives](#core-primitives)
+- [Reactive State](#reactive-state)
+- [Reactive Lists](#reactive-lists)
+- [API Reference](#api-reference)
+- [Contributing Guide](./CONTRIBUTING.md)
 
 ---
 
-## Core Concepts
+## Quick Start
 
-VanJS has four primitives. That's it.
+```bash
+npm create-van-app
+```
 
 ```ts
-import van from "vanjs";
+import van from "@michthemaker/vanjs";
 
-const { div, button, p } = van.tags;
-const state = van.state;
-const derive = van.derive;
-const add = van.add;
+const { div, p, button } = van.tags;
+
+const App = () => {
+  const count = van.state(0);
+  return div(
+    p(() => `Count: ${count.val}`),
+    button({ onclick: () => count.val++ }, "+")
+  );
+};
+
+van.add(document.body, App());
 ```
 
 ---
 
-## `van.state(initialValue)`
+## Core Primitives
 
-Creates a reactive state object. Reading `.val` inside a binding or derive tracks it as a dependency. Writing `.val` triggers updates.
+VanJS has four primitives. That's it.
+
+```ts
+import van from "@michthemaker/vanjs";
+
+const { div, button, p } = van.tags; // create DOM elements
+van.state(0); // reactive state
+van.derive(() => count.val * 2); // computed values
+van.add(document.body, App()); // mount to DOM
+```
+
+---
+
+## Reactive State
+
+`van.state(initialValue)` creates a reactive state object. Reading `.val` inside a binding or derive tracks it as a dependency. Writing `.val` triggers updates.
 
 ```ts
 const count = van.state(0);
 
-count.val; // read
+count.val; // read — tracked as dependency
 count.val = 5; // write — triggers reactive updates
 count.oldVal; // previous value before last update
 count.rawVal; // raw value, no dependency tracking
 ```
 
----
-
-## `van.derive(fn)`
-
-Creates a computed value that reactively depends on states read inside `fn`. Re-runs automatically when dependencies change.
+`van.derive(fn)` creates a computed value that re-runs automatically when its dependencies change.
 
 ```ts
 const count = van.state(0);
 const doubled = van.derive(() => count.val * 2);
 
 count.val = 3;
-doubled.val; // 6 — automatically updated
-```
-
-Think of it as `useMemo` — not `useEffect`. It's for **computed values**, not side effects. That said, side effects inside `derive` are valid since components run once:
-
-```ts
-van.derive(() => {
-  document.title = `Count: ${count.val}`;
-});
-```
-
----
-
-## `van.tags`
-
-A proxy that creates real DOM elements. Pass an optional props object as the first argument, followed by children.
-
-```ts
-const { div, button, h1, input } = van.tags;
-
-// Static
-div({ class: "container" }, h1("Hello"));
-
-// Reactive props — pass a function, it auto-derives
-div({ class: () => (count.val > 5 ? "high" : "low") });
-
-// Reactive children — pass a state directly
-p(count); // re-renders when count changes
-
-// Event handlers
-button({ onclick: () => count.val++ }, "Click me");
-```
-
-### Namespaced tags
-
-```ts
-const { svg, circle } = van.tags("http://www.w3.org/2000/svg");
-```
-
----
-
-## `van.add(dom, ...children)`
-
-Appends children to an existing DOM element. Supports reactive state, functions, strings, nodes, and nested arrays.
-
-```ts
-const app = document.getElementById("app");
-
-van.add(
-  app,
-  h1("Counter"),
-  p(() => `Count is: ${count.val}`),
-  button({ onclick: () => count.val++ }, "+")
-);
-```
-
----
-
-## `van.hydrate(dom, fn)`
-
-Hydrates an existing DOM node with reactive behavior — useful for SSR or pre-rendered HTML.
-
-```ts
-const existing = document.getElementById("counter");
-van.hydrate(existing, (dom) => p(`Count: ${count.val}`));
+doubled.val; // 6 — updated automatically
 ```
 
 ---
 
 ## Reactive Lists
 
-Arrays returned from bindings are handled as **list bindings** — efficient DOM diffing for dynamic lists using start/end comment markers.
+Arrays returned from bindings are handled as list bindings — efficient DOM updates for dynamic lists using start/end comment markers. Only changed nodes are updated, not the whole container.
 
 ```ts
-const items = van.state(["a", "b", "c"]);
+const items = van.state(["apple", "banana", "cherry"]);
 
-div(() => items.val.map((item) => p(item)));
-// → updates only the changed nodes, not the whole div
+van.add(
+  document.body,
+  div(() => items.val.map((item) => p(item)))
+);
+
+// Add an item — only the new node is inserted
+items.val = [...items.val, "date"];
 ```
 
 ---
 
-## Garbage Collection
+## API Reference
 
-VanJS automatically cleans up bindings and listeners whose DOM nodes are no longer connected. GC runs every **1000ms** by default — disconnected nodes stop tracking state changes automatically. No manual cleanup needed.
-
----
-
-## No Lifecycle Hooks
-
-By design. Since component functions run **once** and return real DOM, there's no render loop to escape from:
-
-```ts
-const UserCard = ({ id }) => {
-  const user = van.state(null);
-
-  // Side effects go directly in the component body — runs once on mount
-  fetch(`/api/users/${id}`).then((d) => (user.val = d));
-
-  return div(() => (user.val ? p(user.val.name) : p("Loading...")));
-};
-```
-
-No `useEffect`. No cleanup functions. No rules to break.
+| API                         | Description                     |
+| --------------------------- | ------------------------------- |
+| `van.state(init)`           | Create reactive state           |
+| `van.derive(fn)`            | Create a computed value         |
+| `van.tags`                  | Proxy for creating DOM elements |
+| `van.add(dom, ...children)` | Mount children to a DOM element |
 
 ---
 
-## Full Example
+## Examples
+
+Here is a full counter example:
 
 ```ts
-import van from "vanjs";
+import van from "@michthemaker/vanjs";
 
 const { div, h1, p, button } = van.tags;
 
@@ -175,4 +138,14 @@ van.add(document.body, Counter());
 
 ---
 
-> VanJS is intentionally minimal. The entire runtime fits in a few KB — no build step, no compiler, no framework DSL. Just reactive state + real DOM.
+## Contributing
+
+Development happens in the open on GitHub. Bug fixes, improvements, and new ideas are welcome. Read the [contributing guide](./CONTRIBUTING.md) to learn about the development process and how to propose changes.
+
+### Good First Issues
+
+New to the codebase? Check out the [good first issues](https://github.com/michthemaker/vanjs/labels/good%20first%20issue) label for bugs with limited scope — a great place to start.
+
+## License
+
+VanJS is [MIT licensed](./LICENSE).

@@ -7,26 +7,113 @@ VanJS is a lightweight reactive UI framework that works directly with the real D
 - **Reactive by Default:** `van.state()` and `van.derive()` give you fine-grained reactivity out of the box. Pass state directly to tags or derive computed values — updates propagate automatically.
 - **Tiny by Design:** The entire runtime fits in a few KB. No dependencies, no framework DSL, no abstractions you didn't ask for.
 
-## Installation
-
-```bash
-npx create-van-app
-```
-
 ## Documentation
 
-The documentation is divided into several sections:
-
-- [Quick Start](#)
-- [Core Primitives](#)
-- [Reactive State](#)
-- [Reactive Lists](#)
-- [API Reference](#)
+- [Quick Start](#quick-start)
+- [Core Primitives](#core-primitives)
+- [Reactive State](#reactive-state)
+- [Reactive Lists](#reactive-lists)
+- [API Reference](#api-reference)
 - [Contributing Guide](./CONTRIBUTING.md)
+
+---
+
+## Quick Start
+
+```bash
+npm create-van-app
+```
+
+```ts
+import van from "@michthemaker/vanjs";
+
+const { div, p, button } = van.tags;
+
+const App = () => {
+  const count = van.state(0);
+  return div(
+    p(() => `Count: ${count.val}`),
+    button({ onclick: () => count.val++ }, "+")
+  );
+};
+
+van.add(document.body, App());
+```
+
+---
+
+## Core Primitives
+
+VanJS has four primitives. That's it.
+
+```ts
+import van from "@michthemaker/vanjs";
+
+const { div, button, p } = van.tags; // create DOM elements
+van.state(0); // reactive state
+van.derive(() => count.val * 2); // computed values
+van.add(document.body, App()); // mount to DOM
+```
+
+---
+
+## Reactive State
+
+`van.state(initialValue)` creates a reactive state object. Reading `.val` inside a binding or derive tracks it as a dependency. Writing `.val` triggers updates.
+
+```ts
+const count = van.state(0);
+
+count.val; // read — tracked as dependency
+count.val = 5; // write — triggers reactive updates
+count.oldVal; // previous value before last update
+count.rawVal; // raw value, no dependency tracking
+```
+
+`van.derive(fn)` creates a computed value that re-runs automatically when its dependencies change.
+
+```ts
+const count = van.state(0);
+const doubled = van.derive(() => count.val * 2);
+
+count.val = 3;
+doubled.val; // 6 — updated automatically
+```
+
+---
+
+## Reactive Lists
+
+Arrays returned from bindings are handled as list bindings — efficient DOM updates for dynamic lists using start/end comment markers. Only changed nodes are updated, not the whole container.
+
+```ts
+const items = van.state(["apple", "banana", "cherry"]);
+
+van.add(
+  document.body,
+  div(() => items.val.map((item) => p(item)))
+);
+
+// Add an item — only the new node is inserted
+items.val = [...items.val, "date"];
+```
+
+---
+
+## API Reference
+
+| API                         | Description                     |
+| --------------------------- | ------------------------------- |
+| `van.state(init)`           | Create reactive state           |
+| `van.derive(fn)`            | Create a computed value         |
+| `van.tags`                  | Proxy for creating DOM elements |
+| `van.add(dom, ...children)` | Mount children to a DOM element |
+
+---
 
 ## Examples
 
-Here is a simple counter to get you started:
+Here is a full counter example:
 
 ```ts
 import van from "@michthemaker/vanjs";
@@ -49,7 +136,7 @@ const Counter = () => {
 van.add(document.body, Counter());
 ```
 
-This renders a live counter into the page. Notice there is no JSX, no compiler, and no framework runtime — just functions and real DOM.
+---
 
 ## Contributing
 
