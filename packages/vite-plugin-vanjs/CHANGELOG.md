@@ -5,7 +5,6 @@
 ### Minor Changes
 
 - 3570fc5: Initial release of VanJS — a lightweight reactive UI framework that works directly with the real DOM.
-
   - Fine-grained reactivity via van.state() and van.derive()
   - Real DOM element creation via van.tags proxy
   - Reactive list bindings with efficient DOM diffing using start/end comment markers
@@ -16,7 +15,6 @@
   - No virtual DOM, no compiler, no lifecycle hooks, no build step required
 
   Initial release of the official VanJS Vite plugin providing Hot Module Replacement for VanJS components.
-
   - Automatic HMR wiring for named exports, default exports, and export { } syntax including aliases
   - State preservation across hot reloads using van.state() identity tracking
   - Shape-based state reset — when state initial value type changes across reloads, stale state is discarded automatically

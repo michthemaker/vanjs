@@ -5,9 +5,13 @@ type Options = {
   hmr?: boolean | VanJSHMROptions | undefined;
 };
 
-export default function vanjs(options: Options = { hmr: {
-	smartStateChecking: true
-} }) {
+export default function vanjs(
+  options: Options = {
+    hmr: {
+      smartStateChecking: true,
+    },
+  }
+) {
   const plugins: PluginOption[] = [];
   if (options.hmr)
     plugins.push(
