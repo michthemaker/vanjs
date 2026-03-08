@@ -47,6 +47,11 @@
       }
     }
   },
-  "scripts": {},
+  "scripts": {
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1"
+  },
   "packageManager": "pnpm@10.28.0"
 }

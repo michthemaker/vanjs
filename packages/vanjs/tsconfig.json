@@ -5,7 +5,7 @@
     "target": "ES2022",
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "Node16",
+    "module": "ESNext",
     "skipLibCheck": true,
     "paths": {
       "@src/*": ["./src/*"]
@@ -13,7 +13,8 @@
     "declaration": true,
 
     /* Bundler mode */
-    "moduleResolution": "node16",
+    "moduleResolution": "bundler",
+    "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
 
@@ -23,9 +24,8 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-
-    "outDir": "dist"
+    "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }
