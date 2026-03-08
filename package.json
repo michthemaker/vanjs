@@ -11,6 +11,7 @@
   "author": "michthebrand",
   "main": "index.js",
   "scripts": {
+    "check": "tsgo -b --noEmit",
     "format": "oxfmt .",
     "format:check": "oxfmt --check ."
   },
