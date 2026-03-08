@@ -12,11 +12,15 @@
   "main": "index.js",
   "scripts": {
     "check": "tsgo -b --noEmit",
-    "build": "tsgo -b",
+    "build": "pnpm --filter \"./packages/**\" build",
     "format": "oxfmt .",
-    "format:check": "oxfmt --check ."
+    "format:check": "oxfmt --check .",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "@types/node": "^25.3.0",
     "@typescript/native-preview": "7.0.0-dev.20260306.1",
     "eslint": "^10.0.0",
