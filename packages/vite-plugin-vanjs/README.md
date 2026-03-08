@@ -1,125 +1,157 @@
-# @michthemaker/vite-plugin-vanjs
+# VanJS
 
-The official Vite plugin for [VanJS](https://github.com/michthemaker/vanjs) that brings **Hot Module Replacement** to your components — edit them in a running app without losing state.
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![npm version](https://img.shields.io/npm/v/@michthemaker/vanjs.svg?style=flat)](https://www.npmjs.com/package/@michthemaker/vanjs) [![bundle size](https://img.shields.io/bundlephobia/minzip/@michthemaker/vanjs)](https://bundlephobia.com/package/@michthemaker/vanjs) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+
+VanJS is a lightweight reactive UI framework that works directly with the real DOM.
+
+- **No Virtual DOM:** VanJS binds state directly to real DOM nodes. When state changes, only the affected nodes update — no diffing, no reconciliation, no overhead.
+- **No Compiler:** Write plain JavaScript or TypeScript. No JSX, no template syntax, no build-time magic. Your components are just functions that return DOM elements.
+- **Reactive by Default:** `van.state()` and `van.derive()` give you fine-grained reactivity out of the box. Pass state directly to tags or derive computed values — updates propagate automatically.
+- **Tiny by Design:** The entire runtime fits in a few KB. No dependencies, no framework DSL, no abstractions you didn't ask for.
+
+## Documentation
+
+- [Quick Start](#quick-start)
+- [Core Primitives](#core-primitives)
+- [Reactive State](#reactive-state)
+- [Reactive Lists](#reactive-lists)
+- [API Reference](#api-reference)
+- [Contributing Guide](./CONTRIBUTING.md)
 
 ---
 
-## Installation
+## Quick Start
 
 ```bash
-npm install @michthemaker/vite-plugin-vanjs -D
+npm create-van-app
 ```
 
 ```ts
-// vite.config.ts
-import vanjs from "@michthemaker/vite-plugin-vanjs";
+import van from "@michthemaker/vanjs";
 
-export default {
-  plugins: [vanjs()],
-};
-```
+const { div, p, button } = van.tags;
 
----
-
-## How it works
-
-The plugin transforms your component files at dev time to wire up HMR automatically. When you save a file, only the affected components re-render — state is preserved across updates.
-
-```ts
-// What you write
-export const Counter = () => {
+const App = () => {
   const count = van.state(0);
-  return div(button({ onclick: () => count.val++ }, count));
+  return div(
+    p(() => `Count: ${count.val}`),
+    button({ onclick: () => count.val++ }, "+")
+  );
 };
 
-// What the plugin wires up (simplified)
-export const $$__hmr__Counter = () => { ... };
-export const Counter = (props) =>
-  __VAN_HMR__.registerRender('src/counter.ts:Counter', $$__hmr__Counter, props);
-
-if (import.meta.hot) {
-  import.meta.hot.accept((newModule) => {
-    if (newModule) __VAN_HMR__.rerender('src/counter.ts:Counter', newModule.$$__hmr__Counter);
-  });
-}
-```
-
-None of this touches your production build — it's dev-only.
-
----
-
-## Rules for HMR to work
-
-For the plugin to detect and wire up a component, follow these rules:
-
-**1. Components must be arrow functions**
-
-```ts
-// ✅ supported
-export const Button = (props) => div(...);
-export const Button = async (props) => div(...);
-
-// ❌ not supported
-export function Button(props) { return div(...); }
-```
-
-**2. Components must use `van.tags`**
-
-```ts
-const { div, button } = van.tags;
-
-// ✅ detected — uses a van tag
-export const Card = () => div("hello");
-
-// ❌ not detected — no van tags used
-export const helper = () => ({ foo: "bar" });
-```
-
-**3. Use `const`, not `let` or `var`**
-
-```ts
-// ✅
-const Counter = () => div(...);
-
-// ❌
-let Counter = () => div(...);
-```
-
-**4. All export styles are supported**
-
-```ts
-export const Counter = () => div(...);          // ✅
-export default Counter;                          // ✅
-export { Counter };                              // ✅
-export { Counter as MyCounter };                 // ✅
-export { Counter, Button };                      // ✅
+van.add(document.body, App());
 ```
 
 ---
 
-## Options
+## Core Primitives
+
+VanJS has four primitives. That's it.
 
 ```ts
-vanjs({
-  hmr: {
-    include: /\.[jt]s$/, // files to transform (default: all .js/.ts)
-    exclude: /node_modules/, // files to skip
-    entryMatch: /main\.[jt]s$/, // your app entry file(s)
-  },
-});
+import van from "@michthemaker/vanjs";
+
+const { div, button, p } = van.tags; // create DOM elements
+van.state(0); // reactive state
+van.derive(() => count.val * 2); // computed values
+van.add(document.body, App()); // mount to DOM
 ```
 
 ---
 
-## State preservation
+## Reactive State
 
-`van.state()` is preserved across HMR updates automatically — no extra setup needed.
+`van.state(initialValue)` creates a reactive state object. Reading `.val` inside a binding or derive tracks it as a dependency. Writing `.val` triggers updates.
 
 ```ts
-const count = van.state(0); // survives hot reloads
-const doubled = van.derive(() => count.val * 2); // not preserved, needs to be re-created on HMR
+const count = van.state(0);
+
+count.val; // read — tracked as dependency
+count.val = 5; // write — triggers reactive updates
+count.oldVal; // previous value before last update
+count.rawVal; // raw value, no dependency tracking
+```
+
+`van.derive(fn)` creates a computed value that re-runs automatically when its dependencies change.
+
+```ts
+const count = van.state(0);
+const doubled = van.derive(() => count.val * 2);
+
+count.val = 3;
+doubled.val; // 6 — updated automatically
 ```
 
 ---
 
-> **Note:** This plugin is for development only. All transforms are stripped in production builds, leaving your original source intact and fully tree-shakeable.
+## Reactive Lists
+
+Arrays returned from bindings are handled as list bindings — efficient DOM updates for dynamic lists using start/end comment markers. Only changed nodes are updated, not the whole container.
+
+```ts
+const items = van.state(["apple", "banana", "cherry"]);
+
+van.add(
+  document.body,
+  div(() => items.val.map((item) => p(item)))
+);
+
+// Add an item — only the new node is inserted
+items.val = [...items.val, "date"];
+```
+
+---
+
+## API Reference
+
+| API                         | Description                     |
+| --------------------------- | ------------------------------- |
+| `van.state(init)`           | Create reactive state           |
+| `van.derive(fn)`            | Create a computed value         |
+| `van.tags`                  | Proxy for creating DOM elements |
+| `van.add(dom, ...children)` | Mount children to a DOM element |
+
+---
+
+## Examples
+
+Here is a full counter example:
+
+```ts
+import van from "@michthemaker/vanjs";
+
+const { div, h1, p, button } = van.tags;
+
+const Counter = () => {
+  const count = van.state(0);
+  const doubled = van.derive(() => count.val * 2);
+
+  return div(
+    h1("Counter"),
+    p(() => `Count: ${count.val}`),
+    p(() => `Doubled: ${doubled.val}`),
+    button({ onclick: () => count.val++ }, "+"),
+    button({ onclick: () => count.val-- }, "-")
+  );
+};
+
+van.add(document.body, Counter());
+```
+
+---
+
+## Contributing
+
+Development happens in the open on GitHub. Bug fixes, improvements, and new ideas are welcome. Read the [contributing guide](./CONTRIBUTING.md) to learn about the development process and how to propose changes.
+
+### Good First Issues
+
+New to the codebase? Check out the [good first issues](https://github.com/michthemaker/vanjs/labels/good%20first%20issue) label for bugs with limited scope — a great place to start.
+
+## License
+
+VanJS is [MIT licensed](./LICENSE).
+
+## Acknowledgments
+
+My Acknowledgments go to the original vanjs creators, I am only doing this because of their exceptional work.

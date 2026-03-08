@@ -1,4 +1,6 @@
-# VanJS &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![npm version](https://img.shields.io/npm/v/@michthemaker/vanjs.svg?style=flat)](https://www.npmjs.com/package/@michthemaker/vanjs) [![bundle size](https://img.shields.io/bundlephobia/minzip/@michthemaker/vanjs)](https://bundlephobia.com/package/@michthemaker/vanjs) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+# VanJS
+
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![npm version](https://img.shields.io/npm/v/@michthemaker/vanjs.svg?style=flat)](https://www.npmjs.com/package/@michthemaker/vanjs) [![bundle size](https://img.shields.io/bundlephobia/minzip/@michthemaker/vanjs)](https://bundlephobia.com/package/@michthemaker/vanjs) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
 VanJS is a lightweight reactive UI framework that works directly with the real DOM.
 
@@ -149,3 +151,7 @@ New to the codebase? Check out the [good first issues](https://github.com/michth
 ## License
 
 VanJS is [MIT licensed](./LICENSE).
+
+## Acknowledgments
+
+My Acknowledgments go to the original vanjs creators, I am only doing this because of their exceptional work.
