@@ -12,7 +12,7 @@
   "main": "index.js",
   "scripts": {
     "check": "tsgo -b --noEmit",
-    "build": "tsgo -b",
+    "build": "pnpm --filter \"./packages/**\" build",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "changeset": "changeset",
