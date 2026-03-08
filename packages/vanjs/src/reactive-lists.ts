@@ -45,7 +45,7 @@ export let updateListBinding = (
     current.remove();
     current = next;
   }
-  const fragment = new DocumentFragment
+  const fragment = new DocumentFragment();
   fragment.append(...newNodes);
   parent.insertBefore(fragment, listBinding.endMarker);
 
