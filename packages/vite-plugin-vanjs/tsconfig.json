@@ -7,13 +7,16 @@
     "module": "ESNext",
     "types": ["node"],
     "skipLibCheck": true,
+    "paths": {
+      "@src/*": ["./src/*"]
+    },
+    "declaration": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
-    "noEmit": true,
 
     /* Linting */
     "strict": true,
@@ -21,7 +24,8 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "outDir": "dist"
   },
   "include": ["src"]
 }
