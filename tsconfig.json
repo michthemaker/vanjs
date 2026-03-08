@@ -2,6 +2,9 @@
   "files": [],
   "references": [
     { "path": "./packages/vanjs" },
-    { "path": "./packages/vite-plugin-vanjs" }
+    { "path": "./packages/vite-plugin-vanjs" },
+    { "path": "./apps/examples/basic-reactivity" },
+    { "path": "./apps/examples/plugin-test" },
+    { "path": "./apps/examples/plugin-test-manual" }
   ]
 }
