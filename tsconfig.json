@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/vanjs" },
+    { "path": "./packages/vite-plugin-vanjs" },
+    { "path": "./apps/examples" }
+  ]
+}
