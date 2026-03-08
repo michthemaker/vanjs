@@ -17,6 +17,7 @@
     "format:check": "oxfmt --check ."
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "@types/node": "^25.3.0",
     "@typescript/native-preview": "7.0.0-dev.20260306.1",
     "eslint": "^10.0.0",
