@@ -45,11 +45,9 @@ export let updateListBinding = (
     current.remove();
     current = next;
   }
-
-  // Insert new nodes between markers
-  for (let node of newNodes) {
-    parent.insertBefore(node, listBinding.endMarker);
-  }
+  const fragment = new DocumentFragment
+  fragment.append(...newNodes);
+  parent.insertBefore(fragment, listBinding.endMarker);
 
   // Update the stored nodes reference
   listBinding.nodes = newNodes;
