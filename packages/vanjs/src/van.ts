@@ -39,6 +39,10 @@ export type PropsWithKnownKeys<ElementType> = Partial<{
     : K]: PropValueOrDerived;
 }>;
 
+export type Ref<T> = { current: T | null };
+
+export type RefProp<T> = { ref?: Ref<T> };
+
 export type ValidChildDomValue =
   | Primitive
   | Node
@@ -57,7 +61,8 @@ export type ChildDom =
 export type TagFunc<Result extends Element> = (
   first?:
     | (Props & PropsWithKnownKeys<Result> & ElementEventHandlers<Result>)
-    | ChildDom,
+    | ChildDom
+    | RefProp<Result>,
   ...rest: readonly ChildDom[]
 ) => Result;
 
