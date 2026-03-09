@@ -12,3 +12,5 @@ const { div } = van.tags;
 const ref: Ref<HTMLDivElement> = { current: null };
 return div({ ref });
 ```
+
+A ref is just a plain JavaScript object with a `current` property that holds the DOM element.
