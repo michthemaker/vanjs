@@ -34,15 +34,20 @@ vanjs/
     │       ├── reactive-lists.ts  # list binding logic
     │       └── event-handlers.ts  # event handler types
     │
-    └── vite-plugin-vanjs/  # vite HMR plugin
+    ├── vite-plugin-vanjs/  # vite HMR plugin
+    │    └── src/
+    │        ├── index.ts    # plugin entry point
+    │        └── plugin.ts   # HMR transformation logic
+    └── create-van-app/  # project scaffolding cli tool
         └── src/
-            ├── index.ts    # plugin entry point
-            └── plugin.ts   # HMR transformation logic
+            ├── index.ts    # binary entry point
 ```
 
 If you're fixing a core reactivity bug → `packages/vanjs/src/index.ts`
 
 If you're fixing an HMR or transform bug → `packages/vite-plugin-vanjs/src/plugin.ts`
+
+If you're fixing a Project Scaffolding bug → `packages/create-van-app/src/index.ts`
 
 If you're adding an example → `apps/examples/<example-name>/`
 
@@ -85,6 +90,12 @@ pnpm build
 pnpm dev
 ```
 
+### Working on the Project Scaffolding
+
+```bash
+cd packages/create-van-app
+```
+
 ### Running the example app
 
 The example app is the best way to test changes end-to-end — it uses both `packages/vanjs` and `packages/vite-plugin-vanjs` locally via workspace linking.
@@ -114,7 +125,7 @@ type(scope): short description
 Optional longer explanation if needed.
 ```
 
-Scope should be the package name: `vanjs` or `vite-plugin-vanjs`
+Scope should be the package name: `vanjs` or `vite-plugin-vanjs` or `create-van-app`
 
 Types: `fix`, `feat`, `docs`, `refactor`, `test`, `chore`
 
@@ -125,6 +136,7 @@ fix(vanjs): handle empty array in reactive list binding
 feat(vanjs): add rawVal to state for non-tracking reads
 fix(vite-plugin-vanjs): support async arrow function components
 docs(vanjs): clarify van.derive vs useEffect comparison
+feat(create-van-app): add vanjs-tailwind template
 ```
 
 ---
@@ -136,7 +148,7 @@ A good bug report includes:
 - A **minimal reproduction** — the smallest possible code that shows the problem
 - What you **expected** to happen
 - What **actually** happened
-- Which package is affected — `vanjs` or `vite-plugin-vanjs`
+- Which package is affected — `vanjs` or `vite-plugin-vanjs` or `create-van-app`
 - Your environment — browser, Node version, pnpm version
 
 ---

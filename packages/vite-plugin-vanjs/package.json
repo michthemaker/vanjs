@@ -17,7 +17,8 @@
   "author": "Michthebrand <michthebrand@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/michthemaker/vanjs.git"
+    "url": "git+https://github.com/michthemaker/vanjs.git",
+    "directory": "packages/vite-plugin-vanjs"
   },
   "type": "module",
   "main": "./src/index.ts",
