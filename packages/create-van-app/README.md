@@ -1,92 +1,66 @@
-# create-vite <a href="https://npmjs.com/package/create-vite"><img src="https://img.shields.io/npm/v/create-vite" alt="npm package"></a>
+# create-van-app <a href="https://npmjs.com/package/create-van-app"><img src="https://img.shields.io/npm/v/create-van-app" alt="npm package"></a>
 
-## Scaffolding Your First Vite Project
+## Scaffolding Your First Van Project
 
 > **Compatibility Note:**
-> Vite requires [Node.js](https://nodejs.org/en/) version 20.19+, 22.12+. However, some templates require a higher Node.js version to work, please upgrade if your package manager warns about it.
+> Create Van App requires [Node.js](https://nodejs.org/en/) version 20.19+, 22.12+. However, some templates require a higher Node.js version to work, please upgrade if your package manager warns about it.
 
 With NPM:
 
 ```bash
-npm create vite@latest
+npm create van-app@latest
 ```
 
 With Yarn:
 
 ```bash
-yarn create vite
+yarn create van-app
 ```
 
 With PNPM:
 
 ```bash
-pnpm create vite
+pnpm create van-app
 ```
 
 With Bun:
 
 ```bash
-bun create vite
+bun create van-app
 ```
 
 With Deno:
 
 ```bash
-deno init --npm vite
+deno init --npm van-app
 ```
 
 Then follow the prompts!
 
-You can also directly specify the project name and the template you want to use via additional command line options. For example, to scaffold a Vite + Vue project, run:
+You can also directly specify the project name and the template you want to use via additional command line options. For example, to scaffold a VanJS + Tailwind project, run:
 
 ```bash
 # npm 7+, extra double-dash is needed:
-npm create vite@latest my-vue-app -- --template vue
+npm create van-app@latest my-van-app -- --template vanjs-ts-tailwind
 
 # yarn
-yarn create vite my-vue-app --template vue
+yarn create van-app my-van-app --template vanjs-ts-tailwind
 
 # pnpm
-pnpm create vite my-vue-app --template vue
+pnpm create van-app my-van-app --template vanjs-ts-tailwind
 
 # Bun
-bun create vite my-vue-app --template vue
+bun create van-app my-van-app --template vanjs-ts-tailwind
 
 # Deno
-deno init --npm vite my-vue-app --template vue
+deno init --npm van-app my-van-app --template vanjs-ts-tailwind
 ```
 
 Currently supported template presets include:
 
-- `vanilla`
-- `vanilla-ts`
-- `vue`
-- `vue-ts`
-- `react`
-- `react-ts`
-- `react-swc`
-- `react-swc-ts`
-- `preact`
-- `preact-ts`
-- `lit`
-- `lit-ts`
-- `svelte`
-- `svelte-ts`
-- `solid`
-- `solid-ts`
-- `qwik`
-- `qwik-ts`
+- `vanjs-ts` + `tailwind` ← default
+- `vanjs-ts` + `css`
+- `vanjs` + `tailwind`
+- `vanjs` + `css`
 
 You can use `.` for the project name to scaffold in the current directory.
-
-## Community Templates
-
-create-vite is a tool to quickly start a project from a basic template for popular frameworks. Check out Awesome Vite for [community maintained templates](https://github.com/vitejs/awesome-vite#templates) that include other tools or target different frameworks. You can use a tool like [tiged](https://github.com/tiged/tiged) to scaffold your project with one of the templates.
-
-```bash
-npx tiged user/project my-project
-cd my-project
-
-npm install
-npm run dev
-```
