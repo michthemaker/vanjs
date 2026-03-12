@@ -10,14 +10,7 @@ import { determineAgent } from '@vercel/detect-agent'
 
 const {
   blue,
-  blueBright,
-  cyan,
   green,
-  greenBright,
-  magenta,
-  red,
-  redBright,
-  reset,
   underline,
   yellow,
 } = colors
@@ -74,12 +67,12 @@ const FRAMEWORKS: Framework[] = [
     color: yellow,
     variants: [
       {
-        name: 'tailwind',
+        name: 'ts-tailwind',
         display: 'Tailwind CSS',
         color: blue,
       },
       {
-        name: 'css',
+        name: 'ts-css',
         display: 'CSS',
         color: yellow,
       },
@@ -91,12 +84,12 @@ const FRAMEWORKS: Framework[] = [
     color: green,
     variants: [
       {
-        name: 'tailwind',
+        name: 'js-tailwind',
         display: 'Tailwind CSS',
         color: blue,
       },
       {
-        name: 'css',
+        name: 'js-css',
         display: 'CSS',
         color: yellow,
       },
@@ -187,7 +180,7 @@ async function init() {
   if (!targetDir) {
     if (interactive) {
       const projectName = await prompts.text({
-        message: 'Project name:',
+        message: 'Project name (`.` represents current directory):',
         defaultValue: defaultTargetDir,
         placeholder: defaultTargetDir,
         validate: (value) => {
