@@ -26,6 +26,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # we build packages before typechecking to ensure examples/ dir use correct packages they are up-to-date
+      - name: Build Packages
+        run: pnpm --filter \"./packages/**\" build
+
       - name: Typecheck
         # use tsgo instead of tsc
         run: pnpm tsgo -b --noEmit
