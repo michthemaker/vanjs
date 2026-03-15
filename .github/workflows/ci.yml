@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: List packages
+        run: pnpm ls --depth 3
+
       # we build packages before typechecking to ensure examples/ dir use correct packages they are up-to-date
       - name: Build Packages
         run: pnpm --filter \"./packages/**\" build
