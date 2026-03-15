@@ -1,4 +1,4 @@
 /*.sh
 /node_modules
 **/node_modules
-/packages/mydir
+/packages/test-template-dir
