@@ -1,5 +1,5 @@
 import type { PluginOption } from "vite";
-import { vanjsRefresh, type VanJSHMROptions } from "./plugin";
+import { vanjsRefresh, type VanJSHMROptions } from "./plugin.ts";
 
 type Options = {
   hmr?: boolean | VanJSHMROptions | undefined;

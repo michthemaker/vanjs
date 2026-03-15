@@ -2,4 +2,4 @@
 /dist/
 /*.sh
 /__tests__
-/template-*
+/template-solid-ts

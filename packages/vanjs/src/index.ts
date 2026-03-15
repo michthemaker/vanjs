@@ -226,7 +226,7 @@ let tag = (
   let dom = ns
     ? document.createElementNS(ns, name, { is })
     : document.createElement(name, { is });
-  if (ref) (ref as Ref<Element>).current = dom
+  if (ref) (ref as Ref<Element>).current = dom;
   for (let [k, v] of Object.entries(props)) {
     let getPropDescriptor = (
       proto: object | null

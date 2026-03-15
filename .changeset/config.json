@@ -7,5 +7,10 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["basic-reactivity", "plugin-test", "plugin-test-manual"]
+  "ignore": [
+    "basic-reactivity",
+    "plugin-test",
+    "plugin-test-manual",
+    "test-template"
+  ]
 }

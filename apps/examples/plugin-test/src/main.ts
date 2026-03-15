@@ -16,7 +16,7 @@ const App = (props: { name: string }) => {
       {
         style:
           "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
-          ref: ref
+        ref: ref,
       },
       "VanJS Multi-File HMR Test - me us ",
       props.name,
