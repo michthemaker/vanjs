@@ -20,6 +20,12 @@
     "url": "git+https://github.com/michthemaker/vanjs.git",
     "directory": "packages/vite-plugin-vanjs"
   },
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
