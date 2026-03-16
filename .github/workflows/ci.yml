@@ -30,9 +30,6 @@ jobs:
       - name: Build Packages
         run: pnpm --filter "./packages/**" build
 
-      - name: List packages dir before build
-        run: ls ./packages -R
-
       - name: Typecheck
         # use tsgo instead of tsc
         run: pnpm tsgo -b --noEmit
