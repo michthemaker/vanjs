@@ -1,5 +1,21 @@
 # @michthemaker/vite-plugin-vanjs
 
+## 0.1.2
+
+### Patch Changes
+
+- dfbe3a0: Added `vite` to dependency for inclusion in registry downloads
+
+## 0.1.1
+
+### Patch Changes
+
+- c9e0bdb: - Fix README.md content to cater to @michthemaker/vite-plugin-vanjs
+  - Use .ts file extension for all source imports for consistency
+  - Use `dist` folder in dev to mirror production build output
+- 28b734b: Added necessary files to `files` field in package `package.json`
+- d300d21: Added repository subdirectory in package.json
+
 ## 0.1.0
 
 ### Minor Changes

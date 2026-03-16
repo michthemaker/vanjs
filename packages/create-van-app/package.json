@@ -1,6 +1,6 @@
 {
   "name": "create-van-app",
-  "version": "0.0.0",
+  "version": "0.2.1",
   "description": "VanJS CLI for creating new projects",
   "keywords": [
     "Minimalist",
@@ -48,13 +48,15 @@
     "dev": "tsup --watch",
     "build": "tsup"
   },
-  "devDependencies": {
+  "dependencies": {
     "@clack/prompts": "^1.1.0",
-    "@types/cross-spawn": "^6.0.6",
     "@vercel/detect-agent": "^1.1.0",
     "cross-spawn": "^7.0.6",
     "mri": "^1.2.0",
-    "picocolors": "^1.1.1",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "tsup": "^8.5.1"
   },
   "engines": {

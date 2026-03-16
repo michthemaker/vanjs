@@ -1,6 +1,6 @@
 {
   "name": "@michthemaker/vite-plugin-vanjs",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "The default Vite plugin for VanJS projects",
   "keywords": [
     "fast refresh",
@@ -40,11 +40,11 @@
     "build": "tsup"
   },
   "dependencies": {
-    "magic-string": "^0.30.21"
+    "magic-string": "^0.30.21",
+    "vite": "^7.3.1"
   },
   "devDependencies": {
-    "tsup": "^8.5.1",
-    "vite": "^7.3.1"
+    "tsup": "^8.5.1"
   },
   "packageManager": "pnpm@10.28.0"
 }
