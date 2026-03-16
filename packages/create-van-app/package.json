@@ -1,6 +1,6 @@
 {
   "name": "create-van-app",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "VanJS CLI for creating new projects",
   "keywords": [
     "Minimalist",
