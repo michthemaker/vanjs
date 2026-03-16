@@ -1,0 +1,4 @@
+/node_modules/
+/dist/
+/*.sh
+/__tests__

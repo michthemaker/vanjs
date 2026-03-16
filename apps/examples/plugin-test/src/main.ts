@@ -1,4 +1,4 @@
-import van from "@michthemaker/vanjs";
+import van, { type Ref } from "@michthemaker/vanjs";
 import { Counter } from "./barrel-export";
 
 const { div, h1, button } = van.tags;
@@ -6,6 +6,7 @@ const { div, h1, button } = van.tags;
 // Component with props - using named export
 const App = (props: { name: string }) => {
   const myName = van.state("Mich");
+  const ref: Ref<HTMLHeadingElement> = { current: null };
   return div(
     {
       style:
@@ -15,6 +16,7 @@ const App = (props: { name: string }) => {
       {
         style:
           "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
+        ref: ref,
       },
       "VanJS Multi-File HMR Test - me us ",
       props.name,

@@ -1,0 +1,60 @@
+{
+  "name": "create-van-app",
+  "version": "0.0.0",
+  "description": "VanJS CLI for creating new projects",
+  "keywords": [
+    "Minimalist",
+    "Reactive",
+    "UI",
+    "UI Framework",
+    "Ultra-lightweight",
+    "Van",
+    "Vanilla",
+    "Vanjs"
+  ],
+  "homepage": "https://github.com/michthemaker/vanjs/tree/main/packages/create-van-app",
+  "bugs": {
+    "url": "https://github.com/michthemaker/vanjs/issues"
+  },
+  "license": "MIT",
+  "author": "Michthebrand <michthebrand@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michthemaker/vanjs.git",
+    "directory": "packages/create-van-app"
+  },
+  "funding": "https://github.com/michthemaker/vanjs?sponsor=1",
+  "bin": {
+    "create-van-app": "dist/index.js"
+  },
+  "files": [
+    "template-*",
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "import": "./dist/index.js"
+      }
+    },
+    "main": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^1.1.0",
+    "@types/cross-spawn": "^6.0.6",
+    "@vercel/detect-agent": "^1.1.0",
+    "cross-spawn": "^7.0.6",
+    "mri": "^1.2.0",
+    "picocolors": "^1.1.1",
+    "tsup": "^8.5.1"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "packageManager": "pnpm@10.28.0"
+}

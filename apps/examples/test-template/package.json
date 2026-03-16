@@ -1,0 +1,19 @@
+{
+  "name": "vanjs-ts-starter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@michthemaker/vanjs": "workspace:*"
+  },
+  "devDependencies": {
+    "@michthemaker/vite-plugin-vanjs": "workspace:*",
+    "@types/node": "^25.3.0",
+    "vite": "latest"
+  }
+}

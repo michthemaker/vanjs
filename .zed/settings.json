@@ -9,6 +9,16 @@
 {
   // lint and formatting
   "lsp": {
+    "tailwindcss-language-server": {
+      "settings": {
+        "experimental": {
+          "classRegex": [
+            ["cn\\(([^)]*)\\)", "\"'`([^\"'`]*).*?[\"'`]"],
+            ["class:\\s*[\"'`]([^\"'`]*)[\"'`]"]
+          ]
+        }
+      }
+    },
     "oxlint": {
       "initialization_options": {
         "settings": {

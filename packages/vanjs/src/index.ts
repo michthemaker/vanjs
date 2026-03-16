@@ -1,8 +1,8 @@
 // This file consistently uses `let` keyword instead of `const` for reducing the bundle size.
 
-import type { State, ChildDom, Van } from "./van.ts";
+import type { State, ChildDom, Van, Ref } from "./van.ts";
 import type { ListBinding } from "./reactive-lists.ts";
-import { createListBinding, updateListBinding } from "./reactive-lists.js";
+import { createListBinding, updateListBinding } from "./reactive-lists.ts";
 
 export type * from "./van.ts";
 
@@ -216,7 +216,7 @@ let tag = (
   name: string,
   ...args: unknown[]
 ): Element => {
-  let [{ is, ...props }, ...children] =
+  let [{ is, ref, ...props }, ...children] =
     protoOf(args[0] ?? 0) === objProto
       ? (args as [{ is?: string } & Record<string, unknown>, ...unknown[]])
       : ([{}, ...args] as [
@@ -226,6 +226,7 @@ let tag = (
   let dom = ns
     ? document.createElementNS(ns, name, { is })
     : document.createElement(name, { is });
+  if (ref) (ref as Ref<Element>).current = dom;
   for (let [k, v] of Object.entries(props)) {
     let getPropDescriptor = (
       proto: object | null

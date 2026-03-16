@@ -1,6 +1,6 @@
 {
   "name": "@michthemaker/vanjs",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "🍦 VanJS: The Smallest Reactive UI Framework in the World",
   "keywords": [
     "DOM",
@@ -30,28 +30,20 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/michthemaker/vanjs.git"
+    "url": "git+https://github.com/michthemaker/vanjs.git",
+    "directory": "packages/vanjs"
   },
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/van.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/van.ts",
-      "import": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "import": "./dist/index.js"
-      }
-    },
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts"
-  },
   "scripts": {
+    "dev": "tsup --watch",
     "build": "tsup"
   },
   "devDependencies": {
