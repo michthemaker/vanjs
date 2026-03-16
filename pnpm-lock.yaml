@@ -76,13 +76,10 @@ importers:
         version: 8.0.0(@types/node@25.3.0)(esbuild@0.27.3)(jiti@1.21.7)
 
   packages/create-van-app:
-    devDependencies:
+    dependencies:
       '@clack/prompts':
         specifier: ^1.1.0
         version: 1.1.0
-      '@types/cross-spawn':
-        specifier: ^6.0.6
-        version: 6.0.6
       '@vercel/detect-agent':
         specifier: ^1.1.0
         version: 1.2.1
@@ -95,6 +92,10 @@ importers:
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
+    devDependencies:
+      '@types/cross-spawn':
+        specifier: ^6.0.6
+        version: 6.0.6
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(jiti@1.21.7)(postcss@8.5.8)(typescript@5.9.3)
@@ -110,13 +111,13 @@ importers:
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21
+      vite:
+        specifier: ^7.3.1
+        version: 7.3.1(@types/node@25.3.0)(jiti@1.21.7)(lightningcss@1.32.0)
     devDependencies:
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(jiti@1.21.7)(postcss@8.5.8)(typescript@5.9.3)
-      vite:
-        specifier: ^7.3.1
-        version: 7.3.1(@types/node@25.3.0)(jiti@1.21.7)(lightningcss@1.32.0)
 
 packages:
 
