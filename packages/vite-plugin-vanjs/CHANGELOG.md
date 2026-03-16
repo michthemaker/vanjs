@@ -1,5 +1,11 @@
 # @michthemaker/vite-plugin-vanjs
 
+## 0.1.2
+
+### Patch Changes
+
+- dfbe3a0: Added `vite` to dependency for inclusion in registry downloads
+
 ## 0.1.1
 
 ### Patch Changes

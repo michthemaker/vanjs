@@ -1,5 +1,11 @@
 # create-van-app
 
+## 0.2.1
+
+### Patch Changes
+
+- dfbe3a0: Added correct dependencies for inclusion in registry downloads
+
 ## 0.2.0
 
 ### Minor Changes
