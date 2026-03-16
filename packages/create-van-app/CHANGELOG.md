@@ -1,5 +1,11 @@
 # create-van-app
 
+## 0.3.0
+
+### Minor Changes
+
+- cc76ab9: Update vite-plugin-vanjs dep version
+
 ## 0.2.1
 
 ### Patch Changes
