@@ -1,5 +1,11 @@
 # create-van-app
 
+## 0.2.0
+
+### Minor Changes
+
+- fc2d487: Bumped vite-plugin-vanjs version in templates for scaffolder
+
 ## 0.1.0
 
 ### Minor Changes
