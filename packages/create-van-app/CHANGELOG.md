@@ -25,7 +25,6 @@
 - 60f27ba: Project scaffolder for VanJS apps with support for JavaScript, TypeScript, and Tailwind CSS.
 
   ## Features
-
   - Interactive CLI — prompts for project name, framework variant, and styling approach
   - Non-interactive mode — fully scriptable via flags for CI and AI agent environments
   - Detects AI agent environments and suggests one-shot usage automatically
@@ -43,7 +42,6 @@
   | `js-css`      | JavaScript | Plain CSS       |
 
   ## TypeScript + Tailwind template includes
-
   - `@michthemaker/vanjs` + `@michthemaker/vite-plugin-vanjs` with HMR
   - Tailwind CSS v3 with PostCSS and Autoprefixer
   - `clsx` + `tailwind-merge` via a `cn()` utility

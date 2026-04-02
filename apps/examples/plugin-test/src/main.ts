@@ -1,5 +1,6 @@
 import van, { type Ref } from "@michthemaker/vanjs";
 import { Counter } from "./barrel-export";
+import { ContextTest } from "./context-test";
 
 const { div, h1, button } = van.tags;
 
@@ -12,6 +13,7 @@ const App = (props: { name: string }) => {
       style:
         "padding: 20px; font-family: sans-serif; max-width: 800px; margin: 0 auto;",
     },
+    ContextTest(),
     h1(
       {
         style:

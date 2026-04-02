@@ -5,14 +5,38 @@ export type {
   ReactiveEventHandler,
 } from "./event-handlers.ts";
 
+/**
+ * A reactive state object that automatically triggers updates when its value changes.
+ *
+ * @template T The type of the state's value.
+ *
+ * @example
+ *
+ * ```ts
+ * const count = van.state(0);
+ * count.val = 5; // triggers reactive updates
+ * ```
+ */
 export interface State<T> {
+  /**
+   * The current value of the state. Reading tracks it as a dependency, writing triggers updates.
+   */
   val: T;
+
+  /**
+   * The previous value before the last update.
+   */
   readonly oldVal: T;
+
+  /**
+   * The raw value without dependency tracking.
+   */
   readonly rawVal: T;
 }
 
-// Defining readonly view of State<T> for covariance.
-// Basically we want StateView<string> to implement StateView<string | number>
+/**
+ * Readonly view of State<T> for covariance.
+ */
 export type StateView<T> = Readonly<State<T>>;
 
 export type Val<T> = State<T> | T;
@@ -39,6 +63,11 @@ export type PropsWithKnownKeys<ElementType> = Partial<{
     : K]: PropValueOrDerived;
 }>;
 
+/**
+ * A mutable ref object that holds a current value.
+ *
+ * @template T The type of the ref's value.
+ */
 export type Ref<T> = { current: T | null };
 
 export type RefProp<T> = { ref?: Ref<T> };
@@ -66,43 +95,84 @@ export type TagFunc<Result extends Element> = (
   ...rest: readonly ChildDom[]
 ) => Result;
 
-// HTML Tags - typed for all known HTML elements
+/**
+ * HTML tag functions typed for all known HTML elements.
+ */
 type HTMLTags = Readonly<Record<string, TagFunc<Element>>> & {
   [K in keyof HTMLElementTagNameMap]: TagFunc<HTMLElementTagNameMap[K]>;
 };
 
-// SVG Tags - typed for all known SVG elements
+/**
+ * SVG tag functions typed for all known SVG elements.
+ */
 type SVGTags = Readonly<Record<string, TagFunc<SVGElement>>> & {
   [K in keyof SVGElementTagNameMap]: TagFunc<SVGElementTagNameMap[K]>;
 };
 
-// MathML Tags - typed for all known MathML elements
+/**
+ * MathML tag functions typed for all known MathML elements.
+ */
 type MathMLTags = Readonly<Record<string, TagFunc<MathMLElement>>> & {
   [K in keyof MathMLElementTagNameMap]: TagFunc<MathMLElementTagNameMap[K]>;
 };
 
-// Namespace URIs
 type SVGNamespaceURI = "http://www.w3.org/2000/svg";
 type MathMLNamespaceURI = "http://www.w3.org/1998/Math/MathML";
 
-// Namespace function overloads
+/**
+ * Creates tag functions for elements in a specific namespace.
+ */
 type NamespacedTags = {
   (namespaceURI: SVGNamespaceURI): SVGTags;
   (namespaceURI: MathMLNamespaceURI): MathMLTags;
   (namespaceURI: string): Readonly<Record<string, TagFunc<Element>>>;
 };
 
+/**
+ * Creates a reactive state object.
+ *
+ * @template T The type of the state's value.
+ *
+ * @example
+ *
+ * ```ts
+ * const count = van.state(0);
+ * const name = van.state("Alice");
+ * ```
+ */
 declare function state<T>(): State<T>;
 declare function state<T>(initVal: T): State<T>;
 
+/**
+ * The main VanJS interface.
+ */
 export interface Van {
+  /**
+   * Creates a reactive state object.
+   */
   readonly state: typeof state;
+
+  /**
+   * Creates derived state from a function.
+   */
   readonly derive: <T>(f: () => T) => State<T>;
+
+  /**
+   * Adds child elements to a DOM node.
+   */
   readonly add: (
     dom: Element | DocumentFragment,
     ...children: readonly ChildDom[]
   ) => Element;
+
+  /**
+   * Tag functions for creating HTML, SVG, and MathML elements.
+   */
   readonly tags: HTMLTags & NamespacedTags;
+
+  /**
+   * Hydrates existing DOM with VanJS reactivity.
+   */
   readonly hydrate: <T extends Node>(
     dom: T,
     f: (dom: T) => T | null | undefined

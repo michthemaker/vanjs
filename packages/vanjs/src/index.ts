@@ -5,6 +5,7 @@ import type { ListBinding } from "./reactive-lists.ts";
 import { createListBinding, updateListBinding } from "./reactive-lists.ts";
 
 export type * from "./van.ts";
+export * from "./utils/context.ts";
 
 // Internal types
 type ConnectedDom = Node | { isConnected: number };
