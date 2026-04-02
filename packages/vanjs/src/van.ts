@@ -1,13 +1,84 @@
 import type { ElementEventHandlers } from "./event-handlers.ts";
 
+/*
+Examples of React jsdoc comment types that clearly states what the API does
+/**
+ * Created by {@link createRef}, or {@link useRef} when passed `null`.
+ *
+ * @template T The type of the ref's value.
+ *
+ * @example
+ *
+ * ```tsx
+ * const ref = createRef<HTMLDivElement>();
+ *
+ * ref.current = document.createElement('div'); // Error
+ * ```
+ */
+// interface RefObject<T> {
+//     /**
+//      * The current value of the ref.
+//
+//     current: T;
+// }
+// */
+//
+//
+// // This will technically work if you give a Consumer<T> or Provider<T> but it's deprecated and warns
+// /**
+//  * Accepts a context object (the value returned from `React.createContext`) and returns the current
+//  * context value, as given by the nearest context provider for the given context.
+//  *
+//  * @version 16.8.0
+//  * @see {@link https://react.dev/reference/react/useContext}
+//  */
+// function useContext<T>(context: Context<T> /*, (not public API) observedBits?: number|boolean */): T;
+// /**
+//  * Returns a stateful value, and a function to update it.
+//  *
+//  * @version 16.8.0
+//  * @see {@link https://react.dev/reference/react/useState}
+//  */
+// function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>];
+//
+
 export type {
   ElementEventHandlers,
   ReactiveEventHandler,
 } from "./event-handlers.ts";
 
+/**
+ * A reactive state object that automatically triggers updates when its value changes.
+ *
+ * @template T The type of the state's value.
+ *
+ * @example
+ *
+ * ```ts
+ * const count = van.state(0);
+ *
+ * count.val; // read — tracked as dependency
+ * count.val = 5; // write — triggers reactive updates
+ * count.oldVal; // previous value before last update
+ * count.rawVal; // raw value, no dependency tracking
+ * ```
+ */
 export interface State<T> {
+  /**
+   * The current value of the state. Reading this property inside a binding or derive
+   * tracks it as a dependency. Writing to this property triggers reactive updates.
+   */
   val: T;
+
+  /**
+   * The previous value before the last update. Reading this property tracks it as a dependency.
+   */
   readonly oldVal: T;
+
+  /**
+   * The raw value without dependency tracking. Use this to read the value without
+   * creating a reactive dependency.
+   */
   readonly rawVal: T;
 }
 

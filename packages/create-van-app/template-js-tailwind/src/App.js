@@ -3,18 +3,19 @@ import ViteLogo from "./assets/vite.svg";
 import VanJSLogo from "./assets/vanjs.svg";
 import { cn } from "./lib/cn";
 
-const { div, h1, h2, p, a, button, code, section, ul, li, img } =
-  van.tags;
+const { div, h1, h2, p, a, button, code, section, ul, li, img } = van.tags;
 
-const { svg, use } = van.tags('http://www.w3.org/2000/svg');
+const { svg, use } = van.tags("http://www.w3.org/2000/svg");
 
 // Shared link class
-const linkCls =
-  cn("text-gray-800 dark:text-gray-100 text-base rounded-lg bg-gray-100/50 shadow-sm shadow-black/10 ring-1 ring-black/10 dark:bg-gray-800/50 flex px-3 py-1.5 items-center gap-2 no-underline transition-shadow duration-300 hover:shadow-lg max-lg:w-full max-lg:justify-center box-border");
+const linkCls = cn(
+  "text-gray-800 dark:text-gray-100 text-base rounded-lg bg-gray-100/50 shadow-sm shadow-black/10 ring-1 ring-black/10 dark:bg-gray-800/50 flex px-3 py-1.5 items-center gap-2 no-underline transition-shadow duration-300 hover:shadow-lg max-lg:w-full max-lg:justify-center box-border"
+);
 
 // Shared h2 class
-const h2Cls =
-  cn("font-sans font-medium text-gray-900 dark:text-gray-100 text-2xl max-lg:text-xl leading-[118%] tracking-[-0.24px] mb-2");
+const h2Cls = cn(
+  "font-sans font-medium text-gray-900 dark:text-gray-100 text-2xl max-lg:text-xl leading-[118%] tracking-[-0.24px] mb-2"
+);
 
 const App = () => {
   const count = van.state(0);
@@ -49,7 +50,7 @@ const App = () => {
           alt: "Vite logo",
           width: "64",
           height: "64",
-        }),
+        })
       ),
 
       // Headline + subtitle
@@ -138,7 +139,11 @@ const App = () => {
           li(
             { class: "max-lg:flex-[1_1_calc(50%-8px)]" },
             a(
-              { href: "https://github.com/michthemaker/vanjs", target: "_blank", class: linkCls },
+              {
+                href: "https://github.com/michthemaker/vanjs",
+                target: "_blank",
+                class: linkCls,
+              },
               img({
                 class: "h-[18px] w-[18px] hidden min-[360px]:inline",
                 src: VanJSLogo,
@@ -147,7 +152,7 @@ const App = () => {
                 height: "18",
               }),
               "Learn VanJS"
-            ),
+            )
           )
         )
       ),
@@ -188,7 +193,7 @@ const App = () => {
               ),
               "GitHub"
             )
-          ),
+          )
         )
       )
     ),
@@ -202,7 +207,7 @@ const App = () => {
         "h-[88px] max-lg:h-12 border-t border-gray-200 dark:border-gray-800",
     })
   );
-}
+};
 
 // Decorative tick marks at section boundaries
 const Ticks = () => {
@@ -215,6 +220,6 @@ const Ticks = () => {
       "after:border-[5px] after:border-transparent after:border-r-gray-200 dark:after:border-r-gray-800",
     ]),
   });
-}
+};
 
 export default App;

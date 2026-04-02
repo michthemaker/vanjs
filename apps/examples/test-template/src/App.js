@@ -18,8 +18,20 @@ const App = () => {
       // Hero logos
       div(
         { class: "hero" },
-        img({ src: VanJSLogo, class: "logo", alt: "VanJS logo", width: "64", height: "64" }),
-        img({ src: ViteLogo, class: "logo", alt: "Vite logo", width: "64", height: "64" }),
+        img({
+          src: VanJSLogo,
+          class: "logo",
+          alt: "VanJS logo",
+          width: "64",
+          height: "64",
+        }),
+        img({
+          src: ViteLogo,
+          class: "logo",
+          alt: "Vite logo",
+          width: "64",
+          height: "64",
+        })
       ),
 
       // Headline + subtitle
@@ -64,14 +76,30 @@ const App = () => {
           li(
             a(
               { href: "https://vite.dev/", target: "_blank", class: "link" },
-              img({ class: "link-icon", src: ViteLogo, alt: "", width: "18", height: "18" }),
+              img({
+                class: "link-icon",
+                src: ViteLogo,
+                alt: "",
+                width: "18",
+                height: "18",
+              }),
               "Explore Vite"
             )
           ),
           li(
             a(
-              { href: "https://github.com/michthemaker/vanjs", target: "_blank", class: "link" },
-              img({ class: "link-icon", src: VanJSLogo, alt: "", width: "18", height: "18" }),
+              {
+                href: "https://github.com/michthemaker/vanjs",
+                target: "_blank",
+                class: "link",
+              },
+              img({
+                class: "link-icon",
+                src: VanJSLogo,
+                alt: "",
+                width: "18",
+                height: "18",
+              }),
               "Learn VanJS"
             )
           )
@@ -91,14 +119,22 @@ const App = () => {
           { class: "link-list" },
           li(
             a(
-              { href: "https://github.com/michthemaker/vanjs", target: "_blank", class: "link" },
+              {
+                href: "https://github.com/michthemaker/vanjs",
+                target: "_blank",
+                class: "link",
+              },
               svg(
-                { class: "link-icon", role: "presentation", "aria-hidden": "true" },
+                {
+                  class: "link-icon",
+                  role: "presentation",
+                  "aria-hidden": "true",
+                },
                 use({ href: "/icons.svg#github-icon" })
               ),
               "GitHub"
             )
-          ),
+          )
         )
       )
     ),

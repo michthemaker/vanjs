@@ -42,7 +42,7 @@ const Counter = (): any => {
       button(
         {
           onclick: () => {
-            counter.val = 0;
+            counter.val = { number: 0 };
           },
           style:
             "margin: 5px; padding: 10px 20px; cursor: pointer; background: #f44336; color: white; border: none; border-radius: 4px;",
