@@ -1,9 +1,58 @@
 import type { ElementEventHandlers } from "./event-handlers.ts";
 
-export type {
-  ElementEventHandlers,
-  ReactiveEventHandler,
-} from "./event-handlers.ts";
+export type * from "./event-handlers.ts";
+
+// SVGAnimated union for fast Attributable lookup
+type SVGAnimatedTypes =
+  | SVGAnimatedLength
+  | SVGAnimatedLengthList
+  | SVGAnimatedNumber
+  | SVGAnimatedNumberList
+  | SVGAnimatedInteger
+  | SVGAnimatedBoolean
+  | SVGAnimatedString
+  | SVGAnimatedAngle
+  | SVGAnimatedEnumeration
+  | SVGAnimatedRect
+  | SVGAnimatedPreserveAspectRatio
+  | SVGAnimatedTransformList;
+
+// Readonly/unsettable DOM object union
+type UnsettableDOMTypes =
+  | DOMPointReadOnly
+  | DOMRectReadOnly
+  | DOMStringMap
+  | DOMStringList
+  | NamedNodeMap
+  | HTMLCollection
+  | NodeListOf<any>
+  | ShadowRoot
+  | Document
+  | DocumentFragment
+  | ValidityState
+  | TimeRanges
+  | TextTrackList
+  | RemotePlayback
+  | MediaKeys
+  | MediaError
+  | FileList
+  | HTMLElement
+  | SVGElement
+  | MathMLElement;
+
+type Attributable<T> = T extends SVGAnimatedTypes
+  ? string | number | boolean
+  : T extends UnsettableDOMTypes | null
+    ? never
+    : T extends Date | null
+      ? string | number | null
+      : T extends MediaProvider | null
+        ? MediaProvider | null
+        : T extends Element | null
+          ? Element | null
+          : T extends object
+            ? never
+            : T;
 
 /**
  * A reactive state object that automatically triggers updates when its value changes.
@@ -45,22 +94,28 @@ export type Primitive = string | number | boolean | bigint;
 
 export type PropValue = Primitive | ((e: any) => void) | null;
 
-export type PropValueOrDerived =
-  | PropValue
-  | StateView<PropValue>
-  | (() => PropValue);
-
-export type Props = Record<string, PropValueOrDerived> & {
-  class?: PropValueOrDerived;
+export type PropValueOrDerived<T> = T | StateView<T> | (() => T);
+// Symbol brand — invisible in completions (unlike string-keyed brands), but still makes
+// Props nominally distinct from ChildDom so tsserver resolves only the props overload when typing `{`.
+declare const vanPropsBrand: unique symbol;
+export type Props = Record<string, PropValueOrDerived<any>> & {
+  readonly [vanPropsBrand]?: never;
+  class?: PropValueOrDerived<string>;
   is?: string;
 };
 
+// Exclude static numeric constants inherited from Node (ATTRIBUTE_NODE, CDATA_SECTION_NODE, etc.)
+// which are `number` primitives that pass through Attributable and cause doubled completions in the LSP.
 export type PropsWithKnownKeys<ElementType> = Partial<{
   [K in keyof ElementType as K extends `on${string}`
     ? ((ev: Event) => any) | null extends ElementType[K]
       ? never
       : K
-    : K]: PropValueOrDerived;
+    : K extends keyof Node
+      ? never
+      : Attributable<ElementType[K]> extends never
+        ? never
+        : K]: PropValueOrDerived<Attributable<ElementType[K]>>;
 }>;
 
 /**
@@ -87,13 +142,10 @@ export type ChildDom =
   | BindingFunc
   | readonly ChildDom[];
 
-export type TagFunc<Result extends Element> = (
-  first?:
-    | (Props & PropsWithKnownKeys<Result> & ElementEventHandlers<Result>)
-    | ChildDom
-    | RefProp<Result>,
-  ...rest: readonly ChildDom[]
-) => Result;
+export interface TagFunc<Result extends Element> {
+  (first?: TagFuncProps<Result>, ...rest: readonly ChildDom[]): Result;
+  (first: ChildDom, ...rest: readonly ChildDom[]): Result;
+}
 
 /**
  * HTML tag functions typed for all known HTML elements.
@@ -166,9 +218,17 @@ export interface Van {
   ) => Element;
 
   /**
-   * Tag functions for creating HTML, SVG, and MathML elements.
+   * Tag functions for creating HTML elements.
    */
   readonly tags: HTMLTags & NamespacedTags;
+  /**
+   * Tag functions for creating SVG elements.
+   */
+  readonly svgTags: SVGTags;
+  /**
+   * Tag functions for creating MathML elements.
+   */
+  readonly mathMlTags: SVGTags;
 
   /**
    * Hydrates existing DOM with VanJS reactivity.

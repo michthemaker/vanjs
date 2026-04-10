@@ -334,6 +334,8 @@ let van: Van = {
     (ns: string) => new Proxy(tag, handler(ns)),
     handler()
   ) as Van["tags"],
+  // svgTags: new Proxy(tag, handler("svg")) as Van["svgTags"],
+  // mathMlTags: new Proxy(tag, handler("math")) as Van["mathMlTags"],
   hydrate: <T extends Node>(dom: T, f: (dom: T) => T | null | undefined): T => (
     update(dom as unknown as ChildNode, bind(f as BindingFunc, dom)), dom
   ),
