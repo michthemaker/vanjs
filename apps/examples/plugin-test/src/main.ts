@@ -3,7 +3,7 @@ import { Counter } from "./barrel-export";
 import { ContextTest } from "./context-test";
 
 const { svg, path } = van.svgTags;
-const { div, h1, button } = van.tags;
+const { div, h1, button, style } = van.tags;
 
 // Component with props - using named export
 const App = (props: { name: string }) => {
@@ -12,8 +12,10 @@ const App = (props: { name: string }) => {
   return div(
     {
       style:
-        "padding: 20px; font-family: sans-serif; max-width: 800px; margin: 0 auto;",
+        "padding-inline: 4px; font-family: sans-serif;; margin: 0; overflow: auto;",
+      class: "no-scrollbar",
     },
+    // okaythen,
     svg(
       {
         xmlns: "http://www.w3.org/2000/svg",
@@ -39,14 +41,14 @@ const App = (props: { name: string }) => {
     h1(
       {
         style:
-          "color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
+          "width: 90%; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;",
         ref: ref,
       },
       "VanJS Multi-File HMR Test - me us ",
       props.name,
       myName
     ),
-    Counter(),
+    // Counter(),
     button(
       {
         onclick() {
