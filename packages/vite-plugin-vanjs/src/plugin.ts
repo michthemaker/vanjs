@@ -101,7 +101,8 @@ function detectComponents(code: string): ComponentInfo[] {
 
   // Extract tag names from van.tags destructuring
   const tagNames = new Set<string>();
-  const tagsDestructurePattern = /const\s*\{\s*([^}]+)\s*\}\s*=\s*van\.tags/g;
+  const tagsDestructurePattern =
+    /const\s*\{\s*([^}]+)\s*\}\s*=\s*van\.\w*[Tt]ags/g;
   while ((match = tagsDestructurePattern.exec(code)) !== null) {
     const names = match[1].split(",").map((s) => s.trim());
     for (const name of names) {
@@ -223,8 +224,15 @@ function detectComponents(code: string): ComponentInfo[] {
       // Skip non-components (lowercase first letter)
       if (!/^[A-Z]/.test(internalName)) continue;
 
-      // Skip already detected by Pattern 1 or 2
-      if (components.some((c) => c.name === internalName)) continue;
+      // If already detected by Pattern 1 or 2, backfill exportStatementRange so
+      // transformSubmoduleComponents knows to remove the export { } statement
+      const alreadyDetected = components.find((c) => c.name === internalName);
+      if (alreadyDetected) {
+        if (!alreadyDetected.exportStatementRange) {
+          alreadyDetected.exportStatementRange = exportStatementRange;
+        }
+        continue;
+      }
 
       // Locate the plain const declaration
       const constDeclPattern = new RegExp(
@@ -396,7 +404,16 @@ function transformSubmoduleComponents(
         removedExportRanges.add(rangeKey);
       }
       // Ensure $$__hmr__Name is exported so newModule.$$__hmr__Name works in HMR accept
-      s.prependLeft(declarationStart, "export ");
+      // Guard: don't double-prepend if the declaration was already `export const`
+      console.log(
+        "`" + code.slice(declarationStart, declarationStart + 35) + "`",
+        "i am the code you are looking for"
+      );
+      const isAlreadyExported =
+        code.slice(declarationStart, declarationStart + 6) === "export";
+      if (!isAlreadyExported) {
+        s.prependLeft(declarationStart, "export ");
+      }
       s.append(
         `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
       );
@@ -745,16 +762,14 @@ class VanJSHMRRuntime {
     const stack = error instanceof Error ? (error.stack || '') : '';
     const overlay = document.createElement('div');
     overlay.id = '__vanjs-hmr-error-overlay';
-    overlay.className = 'vanjs-hmr-no-scrollbar';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);color:#fff;z-index:99999;font-family:monospace;padding:12px;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column;';
-    overlay.innerHTML = '<style>.vanjs-hmr-no-scrollbar::-webkit-scrollbar {display: none;}.vanjs-hmr-no-scrollbar {-ms-overflow-style: none;scrollbar-width: none;}.vanjs-hmr-thin-scrollbar {scrollbar-width: 0;scrollbar-color: #d3d3d3;scroll-padding-left: 10px;}.vanjs-hmr-thin-scrollbar::-webkit-scrollbar {width: 3px;height: 3px;background-color: transparent;};.vanjs-hmr-thin-scrollbar::-webkit-scrollbar-thumb:hover {scale: 2;}.vanjs-hmr-thin-scrollbar::-webkit-scrollbar-thumb {background-color: #d3d3d3;border-radius: 10px;}</style>'
-      + '<div style="max-width:900px;margin:0 auto;width:100%;">'
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);color:#fff;z-index:99999;font-family:monospace;padding:40px;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column;';
+    overlay.innerHTML = '<div style="max-width:900px;margin:0 auto;width:100%;">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
       + '<h2 style="margin:0;color:#ff5555;font-size:20px;">HMR Error in <code>' + slotId + '</code></h2>'
       + '<button id="__vanjs-hmr-dismiss" style="background:none;border:1px solid #666;color:#ccc;padding:6px 16px;cursor:pointer;border-radius:4px;font-family:monospace;font-size:14px;">Dismiss (Esc)</button>'
       + '</div>'
       + '<p style="color:#ccc;margin:0 0 8px 0;font-size:13px;">Old DOM preserved. Fix the error and save to retry.</p>'
-      + '<pre class="vanjs-hmr-thin-scrollbar" style="background:#1a1a2e;color:#ff6b6b;padding:20px;border-radius:8px;overflow:auto;font-size:14px;line-height:1.6;white-space:pre-wrap;border:1px solid #333;margin:0;">'
+      + '<pre style="background:#1a1a2e;color:#ff6b6b;padding:20px;border-radius:8px;overflow:auto;font-size:14px;line-height:1.6;white-space:pre-wrap;border:1px solid #333;margin:0;">'
       + this.escapeHtml(message) + '\\n\\n' + this.escapeHtml(stack) + '</pre></div>';
     const dismiss = () => this.dismissErrorOverlay();
     overlay.querySelector('#__vanjs-hmr-dismiss')?.addEventListener('click', dismiss);
