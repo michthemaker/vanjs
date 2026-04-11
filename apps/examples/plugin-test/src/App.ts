@@ -5,7 +5,7 @@ const { svg, path } = van.svgTags;
 const { div, h1, button } = van.tags;
 
 // Component with props - using named export
-const App = (props: { name: string }) => {
+export const App = (props: { name: string }) => {
   const myName = van.state("Mich");
   const ref: Ref<HTMLHeadingElement> = { current: null };
   return div(
@@ -57,4 +57,8 @@ const App = (props: { name: string }) => {
   );
 };
 
-export { App };
+const Foo = () => {
+  return h1("name");
+};
+
+export { Foo as Bar };

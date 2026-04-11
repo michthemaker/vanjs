@@ -26,6 +26,7 @@ interface ComponentInfo {
   name: string;
   exportedName: string;
   isDefault: boolean;
+  isExportConst: boolean;
   declarationStart: number;
   nameStart: number;
   nameEnd: number;
@@ -159,7 +160,7 @@ function detectComponents(code: string): ComponentInfo[] {
 
   // Pattern 1: export const Name = (...) => ...
   const exportConstPattern =
-    /export\s+const\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(?:async\s+)?(?:<[^>]*>\s*)?(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\s*:\s*[^{=>][^=>]*?)?\s*=>/g;
+    /export[^\S\n]+const[^\S\n]+([A-Z][a-zA-Z0-9]*)\s*=\s*(?:async\s+)?(?:<[^>]*>\s*)?(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\s*:\s*[^{=>][^=>]*?)?\s*=>/g;
   while ((match = exportConstPattern.exec(code)) !== null) {
     const name = match[1];
     const body = extractFunctionBody(match.index + match[0].length);
@@ -170,6 +171,7 @@ function detectComponents(code: string): ComponentInfo[] {
         name,
         exportedName: name,
         isDefault,
+        isExportConst: true,
         declarationStart: match.index,
         nameStart,
         nameEnd: nameStart + name.length,
@@ -193,6 +195,7 @@ function detectComponents(code: string): ComponentInfo[] {
             name,
             exportedName: name,
             isDefault: true,
+            isExportConst: false,
             declarationStart: match.index,
             nameStart,
             nameEnd: nameStart + name.length,
@@ -230,6 +233,8 @@ function detectComponents(code: string): ComponentInfo[] {
       if (alreadyDetected) {
         if (!alreadyDetected.exportStatementRange) {
           alreadyDetected.exportStatementRange = exportStatementRange;
+          // Update exportedName in case of `export { Foo as Bar }`
+          alreadyDetected.exportedName = exportedName;
         }
         continue;
       }
@@ -246,6 +251,7 @@ function detectComponents(code: string): ComponentInfo[] {
         const body = extractFunctionBody(
           constMatch.index + constMatch[0].length
         );
+
         if (usesVanTags(body)) {
           const declarationStart = constMatch.index;
           const nameStart =
@@ -255,6 +261,7 @@ function detectComponents(code: string): ComponentInfo[] {
             name,
             exportedName,
             isDefault: false,
+            isExportConst: false,
             declarationStart,
             nameStart,
             nameEnd,
@@ -385,6 +392,7 @@ function transformSubmoduleComponents(
     name,
     exportedName,
     isDefault,
+    isExportConst,
     declarationStart,
     nameStart,
     nameEnd,
@@ -393,32 +401,38 @@ function transformSubmoduleComponents(
     const slotId = `${relPath}:${name}`;
     const hmrName = `$$__hmr__${name}`;
 
-    // Rename the original component declaration in-place
-    s.overwrite(nameStart, nameEnd, hmrName);
-
     if (exportStatementRange) {
-      // Pattern 3: plain const + separate export { } statement
+      // Pattern 3: plain const (or export const) + separate export { } statement
+
+      // 1. Remove the export { } block (deduplicated for multi-export statements)
       const rangeKey = `${exportStatementRange.start}:${exportStatementRange.end}`;
       if (!removedExportRanges.has(rangeKey)) {
         s.remove(exportStatementRange.start, exportStatementRange.end);
         removedExportRanges.add(rangeKey);
       }
-      // Ensure $$__hmr__Name is exported so newModule.$$__hmr__Name works in HMR accept
-      // Guard: don't double-prepend if the declaration was already `export const`
-      console.log(
-        "`" + code.slice(declarationStart, declarationStart + 35) + "`",
-        "i am the code you are looking for"
-      );
-      const isAlreadyExported =
-        code.slice(declarationStart, declarationStart + 6) === "export";
-      if (!isAlreadyExported) {
-        s.prependLeft(declarationStart, "export ");
+
+      // 2. Rename + ensure exported in one overwrite to avoid MagicString conflicts
+      if (!isExportConst) {
+        // `const Name` → `export const $$__hmr__Name`
+        const sClone = s.slice(nameStart - "const ".length, nameEnd);
+        console.log(sClone, `I am sclone`);
+        s.overwrite(
+          nameStart - "const ".length,
+          nameEnd,
+          `export const ${hmrName}`
+        );
+      } else {
+        // `export const Name` → `export const $$__hmr__Name` (just rename)
+        s.overwrite(nameStart, nameEnd, hmrName);
       }
+
+      // 3. Append public wrapper
       s.append(
         `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
       );
     } else if (isDefault) {
-      // Pattern 2: plain const + export default
+      // Pattern 2: plain const + export default Name
+      s.overwrite(nameStart, nameEnd, hmrName);
       const isAlreadyExported =
         code.slice(declarationStart, declarationStart + 6) === "export";
       if (!isAlreadyExported) {
@@ -434,7 +448,8 @@ function transformSubmoduleComponents(
         );
       }
     } else {
-      // Pattern 1: export const — append wrapper using exportedName
+      // Pattern 1: export const Name — rename + append wrapper
+      s.overwrite(nameStart, nameEnd, hmrName);
       s.append(
         `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
       );
