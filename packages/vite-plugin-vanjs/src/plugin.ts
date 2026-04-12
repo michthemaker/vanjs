@@ -275,6 +275,40 @@ function detectComponents(code: string): ComponentInfo[] {
   return components;
 }
 
+/** Detect local name of `createContext` imported from @michthemaker/vanjs */
+function detectCreateContextLocalName(code: string): string | null {
+  const match =
+    /import\s+(?:\w+\s*,\s*)?\{[^}]*\bcreateContext\s*(?:as\s+(\w+))?[^}]*\}\s*from\s+['"]@michthemaker\/vanjs['"]/.exec(
+      code
+    );
+  if (!match) return null;
+  // if aliased: `createContext as foo` → foo, else → createContext
+  const aliasMatch = /\bcreateContext\s+as\s+(\w+)/.exec(match[0]);
+  return aliasMatch ? aliasMatch[1] : "createContext";
+}
+
+/** Transform createContext() → __VAN_HMR__.createContext('hmrId') */
+function transformCreateContext(
+  ctx: TransformContext,
+  localName: string
+): void {
+  const { code, s, relPath, getLineCol } = ctx;
+  const pattern = new RegExp(
+    `\\b${localName}\\s*(?:<[^>]*>)?\\s*\\(\\s*\\)`,
+    "g"
+  );
+  let match;
+  while ((match = pattern.exec(code)) !== null) {
+    const start = match.index;
+    const hmrId = `${relPath}:${getLineCol(start)}`;
+    s.overwrite(
+      start,
+      start + match[0].length,
+      `__VAN_HMR__.createContext('${hmrId}')`
+    );
+  }
+}
+
 /** Inject the HMR runtime import */
 function injectHmrImport(s: MagicString): void {
   s.prepend(`import { __VAN_HMR__ } from 'virtual:vanjs-hmr-runtime';\n`);
@@ -414,8 +448,6 @@ function transformSubmoduleComponents(
       // 2. Rename + ensure exported in one overwrite to avoid MagicString conflicts
       if (!isExportConst) {
         // `const Name` → `export const $$__hmr__Name`
-        const sClone = s.slice(nameStart - "const ".length, nameEnd);
-        console.log(sClone, `I am sclone`);
         s.overwrite(
           nameStart - "const ".length,
           nameEnd,
@@ -501,16 +533,19 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
     },
 
     transform(code, id) {
-      // Skip non-matching files
+      // Skip non-matching files and virtual modules
+      if (id.startsWith("\0")) return null;
       if (!include.test(id) || exclude.test(id)) return null;
+      const hasCreateContext =
+        code.includes("createContext") && code.includes("@michthemaker/vanjs");
       if (
         !code.includes("van.state") &&
         !code.includes("van.tags") &&
-        !code.includes("van.derive")
+        !code.includes("van.derive") &&
+        !hasCreateContext
       ) {
         return null;
       }
-
       const s = new MagicString(code);
       const relPath = posix
         .normalize(id.replace(projectRoot, "").replace(/\\/g, "/"))
@@ -528,6 +563,9 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
       // === Common transformations ===
       transformVanState(ctx);
       // transformVanDerive(ctx);
+      const createContextLocalName = detectCreateContextLocalName(code);
+      if (createContextLocalName)
+        transformCreateContext(ctx, createContextLocalName);
       const components = detectComponents(code);
       injectHmrImport(s);
 
@@ -570,10 +608,11 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
 // Source of truth: apps/examples/plugin-test/src/hmr-runtime.ts
 // ============================================
 const HMR_RUNTIME_CODE = (shapeMatching = true) => `
-import van from "@michthemaker/vanjs";
+import van, { createContext as __vanCreateContext } from "@michthemaker/vanjs";
 
 class VanJSHMRRuntime {
   stateRegistry = new Map();
+  contextRegistry = new Map();
   // derivedRegistry = new Map();
   renderSlots = new Map();
   currentStateContext = null;
@@ -646,6 +685,15 @@ class VanJSHMRRuntime {
     const state = van.state(initialValue);
     this.currentStateContext = null;
     return state;
+  }
+
+  createContext(hmrId) {
+    if (this.contextRegistry.has(hmrId)) {
+      return this.contextRegistry.get(hmrId);
+    }
+    const ctx = __vanCreateContext();
+    this.contextRegistry.set(hmrId, ctx);
+    return ctx;
   }
 
   /**
