@@ -651,7 +651,6 @@ class VanJSHMRRuntime {
         // Shape changed — reset in place to keep derived subscriptions intact
         this.log('summary', '[VanJS HMR] 🔄 State shape changed for "' + hmrId + '" — resetting');
         preserved.val = initial;
-        console.log(preserved)
         return preserved;
       }
       const state = this.originalVanState(initial);
