@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@michthemaker/vanjs": "^0.2.0"
+    "@michthemaker/vanjs": "^0.4.0"
   },
   "devDependencies": {
-    "@michthemaker/vite-plugin-vanjs": "^0.1.2",
+    "@michthemaker/vite-plugin-vanjs": "^0.2.0",
     "@types/node": "^25.3.0",
     "vite": "latest"
   }

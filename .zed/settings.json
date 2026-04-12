@@ -57,7 +57,7 @@
   // settings for all languages
   "languages": {
     "TypeScript": {
-      "language_servers": ["tsgo"]
+      "language_servers": ["vtsls", "oxfmt"]
     },
     "JavaScript": {
       "language_servers": ["tsgo", "vtsls"],

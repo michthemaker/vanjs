@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    inspect(),
+    inspect({}),
     vanjs({
       hmr: {
         smartStateChecking: true,

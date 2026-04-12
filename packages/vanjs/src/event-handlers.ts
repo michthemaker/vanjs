@@ -13,7 +13,7 @@ import type { StateView } from "./van.ts";
  * @example `((e: MouseEvent) => any) | null` -> `MouseEvent`
  */
 
-type ExtractEventType<T> = [T] extends [
+export type ExtractEventType<T> = [T] extends [
   ((e: infer E extends Event) => any) | null,
 ]
   ? E
