@@ -127,6 +127,10 @@ export type Ref<T> = { current: T | null };
 
 export type RefProp<T> = { ref?: Ref<T> };
 
+export type TagFuncProps<Result extends Element> = Props &
+  PropsWithKnownKeys<Result> &
+  ElementEventHandlers<Result> & { ref?: Ref<Result> };
+
 export type ValidChildDomValue =
   | Primitive
   | Node
@@ -228,7 +232,7 @@ export interface Van {
   /**
    * Tag functions for creating MathML elements.
    */
-  readonly mathMlTags: SVGTags;
+  readonly mathMlTags: MathMLTags;
 
   /**
    * Hydrates existing DOM with VanJS reactivity.

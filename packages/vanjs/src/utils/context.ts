@@ -14,7 +14,11 @@ export type Context<T> = {
   ) => ChildDom;
 };
 
-const contextStacks = new Map<Context<any>, StateView<any>[]>();
+/**
+ * @internal do not use this in app
+ * reserved from framework/vite plugin authors
+ */
+export const contextStacks = new Map<Context<any>, StateView<any>[]>();
 
 /**
  * Creates a context object for sharing state without prop drilling.
