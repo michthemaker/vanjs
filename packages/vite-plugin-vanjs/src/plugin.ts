@@ -820,27 +820,29 @@ class VanJSHMRRuntime {
   }
 
   showErrorOverlay(slotId, error) {
-    this.dismissErrorOverlay();
-    const message = error instanceof Error ? error.message : String(error);
-    const stack = error instanceof Error ? (error.stack || '') : '';
-    const overlay = document.createElement('div');
-    overlay.id = '__vanjs-hmr-error-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);color:#fff;z-index:99999;font-family:monospace;padding:40px;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column;';
-    overlay.innerHTML = '<div style="max-width:900px;margin:0 auto;width:100%;">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-      + '<h2 style="margin:0;color:#ff5555;font-size:20px;">HMR Error in <code>' + slotId + '</code></h2>'
-      + '<button id="__vanjs-hmr-dismiss" style="background:none;border:1px solid #666;color:#ccc;padding:6px 16px;cursor:pointer;border-radius:4px;font-family:monospace;font-size:14px;">Dismiss (Esc)</button>'
-      + '</div>'
-      + '<p style="color:#ccc;margin:0 0 8px 0;font-size:13px;">Old DOM preserved. Fix the error and save to retry.</p>'
-      + '<pre style="background:#1a1a2e;color:#ff6b6b;padding:20px;border-radius:8px;overflow:auto;font-size:14px;line-height:1.6;white-space:pre-wrap;border:1px solid #333;margin:0;">'
-      + this.escapeHtml(message) + '\\n\\n' + this.escapeHtml(stack) + '</pre></div>';
-    const dismiss = () => this.dismissErrorOverlay();
-    overlay.querySelector('#__vanjs-hmr-dismiss')?.addEventListener('click', dismiss);
-    const onKey = (e) => { if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', onKey); } };
-    document.addEventListener('keydown', onKey);
-    document.body.appendChild(overlay);
-    this.errorOverlay = overlay;
-  }
+      this.dismissErrorOverlay();
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? (error.stack || '') : '';
+      const overlay = document.createElement('div');
+      overlay.id = '__vanjs-hmr-error-overlay';
+      overlay.className = 'vanjs-hmr-no-scrollbar';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);color:#fff;z-index:99999;font-family:monospace;padding:12px;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column;';
+      overlay.innerHTML = '<style>.vanjs-hmr-no-scrollbar::-webkit-scrollbar {display: none;}.vanjs-hmr-no-scrollbar {-ms-overflow-style: none;scrollbar-width: none;}.vanjs-hmr-thin-scrollbar {scrollbar-width: 0;scrollbar-color: #d3d3d3;scroll-padding-left: 10px;}.vanjs-hmr-thin-scrollbar::-webkit-scrollbar {width: 3px;height: 3px;background-color: transparent;};.vanjs-hmr-thin-scrollbar::-webkit-scrollbar-thumb:hover {scale: 2;}.vanjs-hmr-thin-scrollbar::-webkit-scrollbar-thumb {background-color: #d3d3d3;border-radius: 10px;}</style>'
+        + '<div style="max-width:900px;margin:0 auto;width:100%;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+        + '<h2 style="margin:0;color:#ff5555;font-size:20px;">HMR Error in <code>' + slotId + '</code></h2>'
+        + '<button id="__vanjs-hmr-dismiss" style="background:none;border:1px solid #666;color:#ccc;padding:6px 16px;cursor:pointer;border-radius:4px;font-family:monospace;font-size:14px;">Dismiss (Esc)</button>'
+        + '</div>'
+        + '<p style="color:#ccc;margin:0 0 8px 0;font-size:13px;">Old DOM preserved. Fix the error and save to retry.</p>'
+        + '<pre class="vanjs-hmr-thin-scrollbar" style="background:#1a1a2e;color:#ff6b6b;padding:20px;border-radius:8px;overflow:auto;font-size:14px;line-height:1.6;white-space:pre-wrap;border:1px solid #333;margin:0;">'
+        + this.escapeHtml(message) + '\\n\\n' + this.escapeHtml(stack) + '</pre></div>';
+      const dismiss = () => this.dismissErrorOverlay();
+      overlay.querySelector('#__vanjs-hmr-dismiss')?.addEventListener('click', dismiss);
+      const onKey = (e) => { if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', onKey); } };
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      this.errorOverlay = overlay;
+    }
 
   dismissErrorOverlay() {
     if (this.errorOverlay) { this.errorOverlay.remove(); this.errorOverlay = null; }
