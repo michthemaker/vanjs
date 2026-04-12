@@ -6,6 +6,7 @@ import {
   useTheme,
 } from "./context-test";
 import { GifModal } from "./GifModal";
+import { UserProfile } from "./UserProfile";
 
 const { div, h1, p, span, button } = van.tags;
 
@@ -51,12 +52,16 @@ export const App = (props: { name: string }) => {
         },
 
         // Edge case 3: same context used twice in same tree
-        // Both reads should return same value
         () => {
           const a = useQueryFt();
           const b = useQueryFt();
-          return p(`same context yeah twice: ${a.name} === ${b.name}`);
-        }
+          return p(`same context twice: ${a.name} === ${b.name}`);
+        },
+
+        // Edge case 4: component that owns its OWN Provider internally
+        // UserBadge inside UserProfile uses UserContext
+        // Save UserProfile.ts → UserBadge should rerender with UserContext snapshot
+        UserProfile()
       )
     )
   );
