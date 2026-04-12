@@ -2,6 +2,6 @@
 "@michthemaker/vanjs": minor
 ---
 
-Added more robust types to van.ts
+Improved type definitions for DOM element properties
 
-Rewrote the vanjs types to better handle type resolution for DOM propperties
+Rewrote the VanJS type system to provide better type resolution when setting attributes and properties on DOM elements. This gives you more accurate autocompletion and compile-time checks when using `van.tags`.

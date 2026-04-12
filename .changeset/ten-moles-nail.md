@@ -2,4 +2,6 @@
 "@michthemaker/vite-plugin-vanjs": minor
 ---
 
-Better error message container wrapper in hmr
+Improved error display during hot module replacement
+
+Error messages during development now display in a better-styled container during hot module replacement, making debugging issues easier to spot and read.
