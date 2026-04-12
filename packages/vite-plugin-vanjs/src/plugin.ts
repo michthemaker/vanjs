@@ -608,7 +608,7 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
 // Source of truth: apps/examples/plugin-test/src/hmr-runtime.ts
 // ============================================
 const HMR_RUNTIME_CODE = (shapeMatching = true) => `
-import van, { createContext as __vanCreateContext } from "@michthemaker/vanjs";
+import van, { createContext as __vanCreateContext, contextStacks as __contextStacks } from "@michthemaker/vanjs";
 
 class VanJSHMRRuntime {
   stateRegistry = new Map();
@@ -803,7 +803,14 @@ class VanJSHMRRuntime {
 
     const startMarker = new Comment('hmr:' + id + ':start');
     const endMarker = new Comment('hmr:' + id + ':end');
-    this.renderSlots.set(id, { startMarker, endMarker, props });
+
+    // Snapshot active context values at render time
+    const contextSnapshot = new Map();
+    for (const [ctx, stack] of __contextStacks.entries()) {
+      if (stack.length > 0) contextSnapshot.set(ctx, stack[stack.length - 1]);
+    }
+
+    this.renderSlots.set(id, { startMarker, endMarker, props, contextSnapshot });
 
     const element = fn(props);
     this.currentInstanceId = prevInstanceId;
@@ -889,7 +896,24 @@ class VanJSHMRRuntime {
       if (props !== undefined) slot.props = props;
 
       try {
-        const newElement = fn(slot.props);
+        // Replay context snapshot so useContext works outside original call tree
+        const snapshot = slot.contextSnapshot;
+        if (snapshot) {
+          for (const [ctx, value] of snapshot.entries()) {
+            if (!__contextStacks.has(ctx)) __contextStacks.set(ctx, []);
+            __contextStacks.get(ctx).push(value);
+          }
+        }
+        let newElement;
+        try {
+          newElement = fn(slot.props);
+        } finally {
+          if (snapshot) {
+            for (const [ctx] of snapshot.entries()) {
+              __contextStacks.get(ctx)?.pop();
+            }
+          }
+        }
         this.currentInstanceId = prevInstanceId;
         parent.insertBefore(newElement, endMarker);
         this.dismissErrorOverlay();
