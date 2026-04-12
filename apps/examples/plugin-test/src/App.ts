@@ -25,11 +25,7 @@ export const App = (props: { name: string }) => {
         props.name,
         myName
       ),
-      // the below uses useQueryFt which calls useContext underneath, see ./context-test.ts file if needed
-      // when i save this file exporting the GifModal, there is an error saying useContext must be called within a Provider
       GifModal(),
-      // the below uses useQueryFt which calls useContext underneath, see ./context-test.ts file if needed
-      // when i save this exact file, everything works fine, no error
       () => {
         const me = useQueryFt();
         return me.name;

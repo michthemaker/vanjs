@@ -7,7 +7,7 @@ const { p } = van.tags;
 
 const GifModal = () => {
   const queryContext = useQueryFt();
-  return p(queryContext.name, "name is usss and them too");
+  return p(queryContext.name, "name is usss and them four");
 };
 
 export { GifModal };
