@@ -26,6 +26,7 @@ interface ComponentInfo {
   name: string;
   exportedName: string;
   isDefault: boolean;
+  isExportConst: boolean;
   declarationStart: number;
   nameStart: number;
   nameEnd: number;
@@ -101,7 +102,8 @@ function detectComponents(code: string): ComponentInfo[] {
 
   // Extract tag names from van.tags destructuring
   const tagNames = new Set<string>();
-  const tagsDestructurePattern = /const\s*\{\s*([^}]+)\s*\}\s*=\s*van\.tags/g;
+  const tagsDestructurePattern =
+    /const\s*\{\s*([^}]+)\s*\}\s*=\s*van\.\w*[Tt]ags/g;
   while ((match = tagsDestructurePattern.exec(code)) !== null) {
     const names = match[1].split(",").map((s) => s.trim());
     for (const name of names) {
@@ -158,7 +160,7 @@ function detectComponents(code: string): ComponentInfo[] {
 
   // Pattern 1: export const Name = (...) => ...
   const exportConstPattern =
-    /export\s+const\s+([A-Z][a-zA-Z0-9]*)\s*=\s*(?:async\s+)?(?:<[^>]*>\s*)?(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\s*:\s*[^{=>][^=>]*?)?\s*=>/g;
+    /export[^\S\n]+const[^\S\n]+([A-Z][a-zA-Z0-9]*)\s*=\s*(?:async\s+)?(?:<[^>]*>\s*)?(\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*)(?:\s*:\s*[^{=>][^=>]*?)?\s*=>/g;
   while ((match = exportConstPattern.exec(code)) !== null) {
     const name = match[1];
     const body = extractFunctionBody(match.index + match[0].length);
@@ -169,6 +171,7 @@ function detectComponents(code: string): ComponentInfo[] {
         name,
         exportedName: name,
         isDefault,
+        isExportConst: true,
         declarationStart: match.index,
         nameStart,
         nameEnd: nameStart + name.length,
@@ -192,6 +195,7 @@ function detectComponents(code: string): ComponentInfo[] {
             name,
             exportedName: name,
             isDefault: true,
+            isExportConst: false,
             declarationStart: match.index,
             nameStart,
             nameEnd: nameStart + name.length,
@@ -223,8 +227,17 @@ function detectComponents(code: string): ComponentInfo[] {
       // Skip non-components (lowercase first letter)
       if (!/^[A-Z]/.test(internalName)) continue;
 
-      // Skip already detected by Pattern 1 or 2
-      if (components.some((c) => c.name === internalName)) continue;
+      // If already detected by Pattern 1 or 2, backfill exportStatementRange so
+      // transformSubmoduleComponents knows to remove the export { } statement
+      const alreadyDetected = components.find((c) => c.name === internalName);
+      if (alreadyDetected) {
+        if (!alreadyDetected.exportStatementRange) {
+          alreadyDetected.exportStatementRange = exportStatementRange;
+          // Update exportedName in case of `export { Foo as Bar }`
+          alreadyDetected.exportedName = exportedName;
+        }
+        continue;
+      }
 
       // Locate the plain const declaration
       const constDeclPattern = new RegExp(
@@ -238,6 +251,7 @@ function detectComponents(code: string): ComponentInfo[] {
         const body = extractFunctionBody(
           constMatch.index + constMatch[0].length
         );
+
         if (usesVanTags(body)) {
           const declarationStart = constMatch.index;
           const nameStart =
@@ -247,6 +261,7 @@ function detectComponents(code: string): ComponentInfo[] {
             name,
             exportedName,
             isDefault: false,
+            isExportConst: false,
             declarationStart,
             nameStart,
             nameEnd,
@@ -258,6 +273,40 @@ function detectComponents(code: string): ComponentInfo[] {
   }
 
   return components;
+}
+
+/** Detect local name of `createContext` imported from @michthemaker/vanjs */
+function detectCreateContextLocalName(code: string): string | null {
+  const match =
+    /import\s+(?:\w+\s*,\s*)?\{[^}]*\bcreateContext\s*(?:as\s+(\w+))?[^}]*\}\s*from\s+['"]@michthemaker\/vanjs['"]/.exec(
+      code
+    );
+  if (!match) return null;
+  // if aliased: `createContext as foo` → foo, else → createContext
+  const aliasMatch = /\bcreateContext\s+as\s+(\w+)/.exec(match[0]);
+  return aliasMatch ? aliasMatch[1] : "createContext";
+}
+
+/** Transform createContext() → __VAN_HMR__.createContext('hmrId') */
+function transformCreateContext(
+  ctx: TransformContext,
+  localName: string
+): void {
+  const { code, s, relPath, getLineCol } = ctx;
+  const pattern = new RegExp(
+    `\\b${localName}\\s*(?:<[^>]*>)?\\s*\\(\\s*\\)`,
+    "g"
+  );
+  let match;
+  while ((match = pattern.exec(code)) !== null) {
+    const start = match.index;
+    const hmrId = `${relPath}:${getLineCol(start)}`;
+    s.overwrite(
+      start,
+      start + match[0].length,
+      `__VAN_HMR__.createContext('${hmrId}')`
+    );
+  }
 }
 
 /** Inject the HMR runtime import */
@@ -377,6 +426,7 @@ function transformSubmoduleComponents(
     name,
     exportedName,
     isDefault,
+    isExportConst,
     declarationStart,
     nameStart,
     nameEnd,
@@ -385,23 +435,36 @@ function transformSubmoduleComponents(
     const slotId = `${relPath}:${name}`;
     const hmrName = `$$__hmr__${name}`;
 
-    // Rename the original component declaration in-place
-    s.overwrite(nameStart, nameEnd, hmrName);
-
     if (exportStatementRange) {
-      // Pattern 3: plain const + separate export { } statement
+      // Pattern 3: plain const (or export const) + separate export { } statement
+
+      // 1. Remove the export { } block (deduplicated for multi-export statements)
       const rangeKey = `${exportStatementRange.start}:${exportStatementRange.end}`;
       if (!removedExportRanges.has(rangeKey)) {
         s.remove(exportStatementRange.start, exportStatementRange.end);
         removedExportRanges.add(rangeKey);
       }
-      // Ensure $$__hmr__Name is exported so newModule.$$__hmr__Name works in HMR accept
-      s.prependLeft(declarationStart, "export ");
+
+      // 2. Rename + ensure exported in one overwrite to avoid MagicString conflicts
+      if (!isExportConst) {
+        // `const Name` → `export const $$__hmr__Name`
+        s.overwrite(
+          nameStart - "const ".length,
+          nameEnd,
+          `export const ${hmrName}`
+        );
+      } else {
+        // `export const Name` → `export const $$__hmr__Name` (just rename)
+        s.overwrite(nameStart, nameEnd, hmrName);
+      }
+
+      // 3. Append public wrapper
       s.append(
         `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
       );
     } else if (isDefault) {
-      // Pattern 2: plain const + export default
+      // Pattern 2: plain const + export default Name
+      s.overwrite(nameStart, nameEnd, hmrName);
       const isAlreadyExported =
         code.slice(declarationStart, declarationStart + 6) === "export";
       if (!isAlreadyExported) {
@@ -417,7 +480,8 @@ function transformSubmoduleComponents(
         );
       }
     } else {
-      // Pattern 1: export const — append wrapper using exportedName
+      // Pattern 1: export const Name — rename + append wrapper
+      s.overwrite(nameStart, nameEnd, hmrName);
       s.append(
         `\nexport const ${exportedName} = (props) => __VAN_HMR__.registerRender('${slotId}', ${hmrName}, props);\n`
       );
@@ -469,16 +533,19 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
     },
 
     transform(code, id) {
-      // Skip non-matching files
+      // Skip non-matching files and virtual modules
+      if (id.startsWith("\0")) return null;
       if (!include.test(id) || exclude.test(id)) return null;
+      const hasCreateContext =
+        code.includes("createContext") && code.includes("@michthemaker/vanjs");
       if (
         !code.includes("van.state") &&
         !code.includes("van.tags") &&
-        !code.includes("van.derive")
+        !code.includes("van.derive") &&
+        !hasCreateContext
       ) {
         return null;
       }
-
       const s = new MagicString(code);
       const relPath = posix
         .normalize(id.replace(projectRoot, "").replace(/\\/g, "/"))
@@ -496,6 +563,9 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
       // === Common transformations ===
       transformVanState(ctx);
       // transformVanDerive(ctx);
+      const createContextLocalName = detectCreateContextLocalName(code);
+      if (createContextLocalName)
+        transformCreateContext(ctx, createContextLocalName);
       const components = detectComponents(code);
       injectHmrImport(s);
 
@@ -538,10 +608,11 @@ export function vanjsRefresh(options: VanJSHMROptions = {}): Plugin {
 // Source of truth: apps/examples/plugin-test/src/hmr-runtime.ts
 // ============================================
 const HMR_RUNTIME_CODE = (shapeMatching = true) => `
-import van from "@michthemaker/vanjs";
+import van, { createContext as __vanCreateContext, contextStacks as __contextStacks } from "@michthemaker/vanjs";
 
 class VanJSHMRRuntime {
   stateRegistry = new Map();
+  contextRegistry = new Map();
   // derivedRegistry = new Map();
   renderSlots = new Map();
   currentStateContext = null;
@@ -580,7 +651,6 @@ class VanJSHMRRuntime {
         // Shape changed — reset in place to keep derived subscriptions intact
         this.log('summary', '[VanJS HMR] 🔄 State shape changed for "' + hmrId + '" — resetting');
         preserved.val = initial;
-        console.log(preserved)
         return preserved;
       }
       const state = this.originalVanState(initial);
@@ -614,6 +684,15 @@ class VanJSHMRRuntime {
     const state = van.state(initialValue);
     this.currentStateContext = null;
     return state;
+  }
+
+  createContext(hmrId) {
+    if (this.contextRegistry.has(hmrId)) {
+      return this.contextRegistry.get(hmrId);
+    }
+    const ctx = __vanCreateContext();
+    this.contextRegistry.set(hmrId, ctx);
+    return ctx;
   }
 
   /**
@@ -723,7 +802,14 @@ class VanJSHMRRuntime {
 
     const startMarker = new Comment('hmr:' + id + ':start');
     const endMarker = new Comment('hmr:' + id + ':end');
-    this.renderSlots.set(id, { startMarker, endMarker, props });
+
+    // Snapshot active context values at render time
+    const contextSnapshot = new Map();
+    for (const [ctx, stack] of __contextStacks.entries()) {
+      if (stack.length > 0) contextSnapshot.set(ctx, stack[stack.length - 1]);
+    }
+
+    this.renderSlots.set(id, { startMarker, endMarker, props, contextSnapshot });
 
     const element = fn(props);
     this.currentInstanceId = prevInstanceId;
@@ -740,27 +826,29 @@ class VanJSHMRRuntime {
   }
 
   showErrorOverlay(slotId, error) {
-    this.dismissErrorOverlay();
-    const message = error instanceof Error ? error.message : String(error);
-    const stack = error instanceof Error ? (error.stack || '') : '';
-    const overlay = document.createElement('div');
-    overlay.id = '__vanjs-hmr-error-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);color:#fff;z-index:99999;font-family:monospace;padding:40px;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column;';
-    overlay.innerHTML = '<div style="max-width:900px;margin:0 auto;width:100%;">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-      + '<h2 style="margin:0;color:#ff5555;font-size:20px;">HMR Error in <code>' + slotId + '</code></h2>'
-      + '<button id="__vanjs-hmr-dismiss" style="background:none;border:1px solid #666;color:#ccc;padding:6px 16px;cursor:pointer;border-radius:4px;font-family:monospace;font-size:14px;">Dismiss (Esc)</button>'
-      + '</div>'
-      + '<p style="color:#ccc;margin:0 0 8px 0;font-size:13px;">Old DOM preserved. Fix the error and save to retry.</p>'
-      + '<pre style="background:#1a1a2e;color:#ff6b6b;padding:20px;border-radius:8px;overflow:auto;font-size:14px;line-height:1.6;white-space:pre-wrap;border:1px solid #333;margin:0;">'
-      + this.escapeHtml(message) + '\\n\\n' + this.escapeHtml(stack) + '</pre></div>';
-    const dismiss = () => this.dismissErrorOverlay();
-    overlay.querySelector('#__vanjs-hmr-dismiss')?.addEventListener('click', dismiss);
-    const onKey = (e) => { if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', onKey); } };
-    document.addEventListener('keydown', onKey);
-    document.body.appendChild(overlay);
-    this.errorOverlay = overlay;
-  }
+      this.dismissErrorOverlay();
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? (error.stack || '') : '';
+      const overlay = document.createElement('div');
+      overlay.id = '__vanjs-hmr-error-overlay';
+      overlay.className = 'vanjs-hmr-no-scrollbar';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);color:#fff;z-index:99999;font-family:monospace;padding:12px;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column;';
+      overlay.innerHTML = '<style>.vanjs-hmr-no-scrollbar::-webkit-scrollbar {display: none;}.vanjs-hmr-no-scrollbar {-ms-overflow-style: none;scrollbar-width: none;}.vanjs-hmr-thin-scrollbar {scrollbar-width: 0;scrollbar-color: #d3d3d3;scroll-padding-left: 10px;}.vanjs-hmr-thin-scrollbar::-webkit-scrollbar {width: 3px;height: 3px;background-color: transparent;};.vanjs-hmr-thin-scrollbar::-webkit-scrollbar-thumb:hover {scale: 2;}.vanjs-hmr-thin-scrollbar::-webkit-scrollbar-thumb {background-color: #d3d3d3;border-radius: 10px;}</style>'
+        + '<div style="max-width:900px;margin:0 auto;width:100%;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+        + '<h2 style="margin:0;color:#ff5555;font-size:20px;">HMR Error in <code>' + slotId + '</code></h2>'
+        + '<button id="__vanjs-hmr-dismiss" style="background:none;border:1px solid #666;color:#ccc;padding:6px 16px;cursor:pointer;border-radius:4px;font-family:monospace;font-size:14px;">Dismiss (Esc)</button>'
+        + '</div>'
+        + '<p style="color:#ccc;margin:0 0 8px 0;font-size:13px;">Old DOM preserved. Fix the error and save to retry.</p>'
+        + '<pre class="vanjs-hmr-thin-scrollbar" style="background:#1a1a2e;color:#ff6b6b;padding:20px;border-radius:8px;overflow:auto;font-size:14px;line-height:1.6;white-space:pre-wrap;border:1px solid #333;margin:0;">'
+        + this.escapeHtml(message) + '\\n\\n' + this.escapeHtml(stack) + '</pre></div>';
+      const dismiss = () => this.dismissErrorOverlay();
+      overlay.querySelector('#__vanjs-hmr-dismiss')?.addEventListener('click', dismiss);
+      const onKey = (e) => { if (e.key === 'Escape') { dismiss(); document.removeEventListener('keydown', onKey); } };
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      this.errorOverlay = overlay;
+    }
 
   dismissErrorOverlay() {
     if (this.errorOverlay) { this.errorOverlay.remove(); this.errorOverlay = null; }
@@ -807,7 +895,24 @@ class VanJSHMRRuntime {
       if (props !== undefined) slot.props = props;
 
       try {
-        const newElement = fn(slot.props);
+        // Replay context snapshot so useContext works outside original call tree
+        const snapshot = slot.contextSnapshot;
+        if (snapshot) {
+          for (const [ctx, value] of snapshot.entries()) {
+            if (!__contextStacks.has(ctx)) __contextStacks.set(ctx, []);
+            __contextStacks.get(ctx).push(value);
+          }
+        }
+        let newElement;
+        try {
+          newElement = fn(slot.props);
+        } finally {
+          if (snapshot) {
+            for (const [ctx] of snapshot.entries()) {
+              __contextStacks.get(ctx)?.pop();
+            }
+          }
+        }
         this.currentInstanceId = prevInstanceId;
         parent.insertBefore(newElement, endMarker);
         this.dismissErrorOverlay();
