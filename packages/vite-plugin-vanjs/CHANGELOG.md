@@ -1,5 +1,29 @@
 # @michthemaker/vite-plugin-vanjs
 
+## 0.2.0
+
+### Minor Changes
+
+- ae65269: Improved error display during hot module replacement
+
+  Error messages during development now display in a better-styled container during hot module replacement, making debugging issues easier to spot and read.
+
+- ae65269: Improved context support during Hot Module Replacement (HMR)
+
+  - **Stable contexts across reloads**: `createContext()` is intercepted and keyed by `hmrId`, so the same context object is reused between HMR updates.
+  - **Context snapshot + replay**: active context stacks are captured on `registerRender` and replayed on `rerender`, allowing `useContext` to keep working even when called outside the original render call tree.
+
+- ae65269: Better handling for multiple and aliased exports
+
+  - Multiple named exports like `export { Foo, Bar }` are now correctly preserved during transformation.
+  - Aliased exports such as `export { Foo as Bar }` now generate the correct wrapper and transform logic.
+
+### Patch Changes
+
+- ae65269: Fixed duplicate export statements during hot reload
+
+  The Vite plugin was incorrectly duplicating export statements like `export { App }` when processing components for hot module replacement. This has been resolved, ensuring clean exports without duplication.
+
 ## 0.1.2
 
 ### Patch Changes
